@@ -170,7 +170,7 @@ export default function ReaderToolbar({
               <div
                 className="absolute right-0 top-full mt-2 w-60 rounded-2xl border shadow-xl backdrop-blur-xl p-2 z-50 text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-150"
                 style={{
-                  backgroundColor: 'var(--card-bg)',
+                  backgroundColor: 'var(--reader-bg)',
                   borderColor: 'var(--reader-border)',
                   color: 'var(--reader-text)',
                 }}

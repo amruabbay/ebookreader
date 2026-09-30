@@ -32,8 +32,8 @@ function cleanText(text: string): string {
  */
 function parseBlocksWithRegex(html: string): ContentBlock[] {
   const blocks: ContentBlock[] = [];
-  // Match top-level blocks or sequential block tags
-  const tagRegex = /<(h[1-6]|p|blockquote|li)[^>]*>([\s\S]*?)<\/\1>/gi;
+  // Match top-level blocks or sequential block tags with word boundary \b to prevent <link> matching <li>
+  const tagRegex = /<(h[1-6]|p|blockquote|li)\b[^>]*>([\s\S]*?)<\/\1>/gi;
   let match;
 
   while ((match = tagRegex.exec(html)) !== null) {
@@ -159,7 +159,8 @@ export async function processEpub(
   let itemMatch;
 
   let coverHref: string | null = null;
-  let tocHref: string | null = null;
+  let ncxHref: string | null = null;
+  let navHref: string | null = null;
 
   while ((itemMatch = manifestRegex.exec(opfContent)) !== null) {
     const attrs = itemMatch[1];
@@ -185,9 +186,17 @@ export async function processEpub(
         coverHref = href;
       }
 
-      // Check for TOC (NCX or Nav)
+      // Check for TOC (NCX or EPUB 3 Nav)
       if (mediaType === 'application/x-dtbncx+xml' || id.toLowerCase() === 'ncx') {
-        tocHref = href;
+        ncxHref = href;
+      }
+      if (
+        properties.includes('nav') ||
+        id.toLowerCase() === 'nav' ||
+        id.toLowerCase() === 'toc' ||
+        href.toLowerCase().endsWith('nav.xhtml')
+      ) {
+        navHref = href;
       }
     }
   }
@@ -219,22 +228,74 @@ export async function processEpub(
     }
   }
 
-  // 4. Build Table of Contents map (href -> title) if TOC exists
+  // 4. Build Table of Contents map (href -> title) from NCX or EPUB3 Nav
   const tocMap = new Map<string, string>();
-  if (tocHref) {
-    const resolvedTocPath = resolvePath(opfPath, tocHref);
-    const tocContent = await (zip.file(resolvedTocPath) || zip.file(tocHref))?.async('string');
-    if (tocContent) {
-      // Parse NCX navPoints
-      const navPointRegex = /<navPoint[\s\S]*?<text>([\s\S]*?)<\/text>[\s\S]*?<content\s+src=["']([^"']+)["']/gi;
+
+  const registerTocEntry = (fullSrc: string, rawLabel: string, resolvedBasePath: string) => {
+    const label = cleanText(rawLabel);
+    if (!label) return;
+
+    // Strip anchors and query parameters to associate with file
+    const fileSrc = fullSrc.split('#')[0].split('?')[0];
+    if (!fileSrc) return;
+
+    const resolvedFileSrc = resolvePath(resolvedBasePath, fileSrc);
+    const isLicense = /project gutenberg.*license/i.test(label);
+
+    const existing = tocMap.get(fileSrc) || tocMap.get(resolvedFileSrc);
+    if (existing) {
+      // Do not allow license or footer disclaimers to overwrite chapters
+      if (isLicense) return;
+
+      // If existing is generic "Contents" and new is more specific like "Dramatis Personae", replace
+      const isGeneric = /^(contents|table of contents|daftar isi)$/i.test(existing);
+      if (isGeneric && !/^(contents|table of contents|daftar isi)$/i.test(label)) {
+        tocMap.set(fileSrc, label);
+        tocMap.set(resolvedFileSrc, label);
+      }
+      // Otherwise keep the first / top-level entry for this file
+      return;
+    }
+
+    if (isLicense) return;
+
+    tocMap.set(fileSrc, label);
+    tocMap.set(resolvedFileSrc, label);
+  };
+
+  // 4a. Parse NCX navPoints
+  if (ncxHref) {
+    const resolvedNcxPath = resolvePath(opfPath, ncxHref);
+    const ncxContent = await (zip.file(resolvedNcxPath) || zip.file(ncxHref))?.async('string');
+    if (ncxContent) {
+      const navPointRegex = /<navPoint[^>]*>[\s\S]*?<navLabel>[\s\S]*?<text>([\s\S]*?)<\/text>[\s\S]*?<\/navLabel>[\s\S]*?<content\s+[^>]*src=["']([^"']+)["']/gi;
       let npMatch;
-      while ((npMatch = navPointRegex.exec(tocContent)) !== null) {
-        const label = cleanText(npMatch[1]);
-        const src = npMatch[2].split('#')[0]; // strip anchor
-        if (label && src) {
-          tocMap.set(src, label);
-          const fullSrc = resolvePath(resolvedTocPath, src);
-          tocMap.set(fullSrc, label);
+      while ((npMatch = navPointRegex.exec(ncxContent)) !== null) {
+        registerTocEntry(npMatch[2], npMatch[1], resolvedNcxPath);
+      }
+    }
+  }
+
+  // 4b. Parse EPUB 3 Navigation Document if present
+  if (navHref) {
+    const resolvedNavPath = resolvePath(opfPath, navHref);
+    const navContent = await (zip.file(resolvedNavPath) || zip.file(navHref))?.async('string');
+    if (navContent) {
+      let navBlock = '';
+      const tocNavMatch = navContent.match(/<nav[^>]*(?:epub:type=["']toc["']|id=["']toc["'])[^>]*>([\s\S]*?)<\/nav>/i);
+      if (tocNavMatch) {
+        navBlock = tocNavMatch[1];
+      } else {
+        const anyNavMatch = navContent.match(/<nav[^>]*>([\s\S]*?)<\/nav>/i);
+        if (anyNavMatch) navBlock = anyNavMatch[1];
+      }
+
+      if (navBlock) {
+        const linkRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+        let lMatch;
+        while ((lMatch = linkRegex.exec(navBlock)) !== null) {
+          const rawLabel = lMatch[2].replace(/<[^>]+>/g, '');
+          registerTocEntry(lMatch[1], rawLabel, resolvedNavPath);
         }
       }
     }
@@ -297,13 +358,28 @@ export async function processEpub(
 
     // Determine chapter title
     // Priority:
-    // 1. TOC map match
-    const tocTitle = tocMap.get(manifestItem.href) || tocMap.get(resolvedChapterPath);
-    if (tocTitle) {
-      detectedTitle = tocTitle;
-    } else if (blocks.length > 0 && blocks[0].type === 'heading') {
-      detectedTitle = blocks[0].text;
-    } else if (!detectedTitle || detectedTitle.toLowerCase() === 'untitled') {
+    // 1. Clean, specific TOC title (if not generic "Contents" when a content heading exists)
+    // 2. First heading in content (e.g. "ACT I", "Dramatis Personæ", "Chapter 1")
+    // 3. Fallback to clean TOC title
+    // 4. HTML document title (if distinct from overall book title)
+    // 5. Default numbered chapter
+    const rawToc = tocMap.get(manifestItem.href) || tocMap.get(resolvedChapterPath);
+    const cleanToc = rawToc && !/project gutenberg.*license/i.test(rawToc) ? cleanText(rawToc) : null;
+    const firstHeading = blocks.length > 0 && blocks[0].type === 'heading' ? blocks[0].text.trim() : null;
+    const cleanDocTitle =
+      detectedTitle && cleanText(detectedTitle).toLowerCase() !== bookTitle.toLowerCase()
+        ? cleanText(detectedTitle)
+        : null;
+
+    if (cleanToc && !/^(contents|table of contents|daftar isi)$/i.test(cleanToc)) {
+      detectedTitle = cleanToc;
+    } else if (firstHeading && !/project gutenberg.*license/i.test(firstHeading)) {
+      detectedTitle = firstHeading;
+    } else if (cleanToc) {
+      detectedTitle = cleanToc;
+    } else if (cleanDocTitle) {
+      detectedTitle = cleanDocTitle;
+    } else {
       detectedTitle = `Chapter ${chapters.length + 1}`;
     }
 

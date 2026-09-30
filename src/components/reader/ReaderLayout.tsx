@@ -261,13 +261,14 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
 
   // Compute adaptive wordsPerPage that scales to fill the viewport height
   const effectiveWordsPerPage = useMemo(() => {
-    // Base target: desktop (2 columns) is 340 words, mobile (1 column) is 170 words
-    const baseTarget = isDesktop ? 340 : 170;
+    // Base target: desktop (2 columns) is 280 words, mobile (1 column) is ~95-105 words
+    const isSmallMobile = typeof window !== 'undefined' && window.innerHeight < 720;
+    const baseTarget = isDesktop ? 290 : isSmallMobile ? 85 : 100;
 
     // Density factor from user setting (if set)
     let densityFactor = 1.0;
     if (settings.wordsPerPage) {
-      const userRef = isDesktop ? 340 : 170;
+      const userRef = isDesktop ? 290 : 100;
       const ratio = settings.wordsPerPage / userRef;
       if (ratio >= 0.6 && ratio <= 1.4) {
         densityFactor = ratio;
@@ -275,20 +276,20 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     }
 
     // Scale dynamically with font size and line height
-    const fontScale = Math.pow(18 / Math.max(12, settings.fontSize), 1.45);
+    const fontScale = Math.pow(18 / Math.max(12, settings.fontSize), 1.4);
     const lineScale = 1.75 / Math.max(1.2, settings.lineHeight);
 
     const calculated = Math.round(baseTarget * densityFactor * fontScale * lineScale);
     // Safe bounds to prevent vertical overflow on any device
-    const minWords = isDesktop ? 200 : 100;
-    const maxWords = isDesktop ? 440 : 220;
+    const minWords = isDesktop ? 160 : 45;
+    const maxWords = isDesktop ? 380 : 135;
     return Math.min(maxWords, Math.max(minWords, calculated));
   }, [isDesktop, settings.wordsPerPage, settings.fontSize, settings.lineHeight]);
 
   // Pagination calculation for paginated mode
   const pages = useMemo(() => {
     return paginateChapter(displayedContent, effectiveWordsPerPage, {
-      firstPageReserve: isDesktop ? 75 : 35,
+      firstPageReserve: isDesktop ? 70 : 40,
     });
   }, [displayedContent, effectiveWordsPerPage, isDesktop]);
 
@@ -1189,9 +1190,15 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           ref={readingAreaRef}
           className={
             settings.readingMode === 'paginated'
-              ? 'flex-1 overflow-hidden flex flex-col justify-between relative pb-20 pb-safe w-full max-w-full'
+              ? 'flex-1 overflow-y-auto overflow-x-hidden flex flex-col justify-between relative w-full max-w-full'
               : 'flex-1 overflow-y-auto overflow-x-hidden relative pb-28 sm:pb-24 w-full max-w-full'
           }
+          style={{
+            paddingBottom:
+              settings.readingMode === 'paginated'
+                ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))'
+                : undefined,
+          }}
         >
           <div
             className={`w-full transition-all duration-200 ${
@@ -1366,7 +1373,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
               </div>
             ) : (
               /* Slide (Paginated) Mode */
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 w-full min-h-0">
                 <ChapterContent
                   content={activePage ? activePage.blocks : []}
                   chapterTitle={displayedTitle}

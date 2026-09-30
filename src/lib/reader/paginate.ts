@@ -103,15 +103,15 @@ export function paginateChapter(
       const spaceLeft = curBudget - currentWords;
 
       // Case A: The remaining paragraph fits within the budget
-      if (remWords <= spaceLeft + 15) {
+      if (remWords <= spaceLeft) {
         currentBlocks.push({ ...block, text: remainingParagraphText });
         currentWords += remWords;
         remainingParagraphText = '';
         break;
       }
 
-      // Case B: Current page is already well-filled (>= 82% capacity)
-      if (currentWords >= curBudget * 0.82) {
+      // Case B: Current page is already well-filled (>= 80% capacity)
+      if (currentWords >= curBudget * 0.8) {
         pushCurrentPage();
         continue;
       }
@@ -121,7 +121,7 @@ export function paginateChapter(
 
       // If cannot be split into multiple sentences (single massive sentence)
       if (sentences.length <= 1) {
-        if (currentWords > 0 && currentWords >= curBudget * 0.65) {
+        if (currentWords > 0 && currentWords >= curBudget * 0.5) {
           pushCurrentPage();
         } else {
           currentBlocks.push({ ...block, text: remainingParagraphText });
@@ -132,7 +132,7 @@ export function paginateChapter(
         continue;
       }
 
-      // Pack sentences to fill the remaining space
+      // Pack sentences to fill the remaining space without exceeding budget
       const part1Sentences: string[] = [];
       let part1Words = 0;
 
@@ -141,7 +141,7 @@ export function paginateChapter(
         const sWordCount = countWords(sentence);
 
         if (
-          part1Words + sWordCount <= spaceLeft + 15 &&
+          part1Words + sWordCount <= spaceLeft &&
           sIdx < sentences.length - 1
         ) {
           part1Sentences.push(sentence);
@@ -159,10 +159,10 @@ export function paginateChapter(
         remainingParagraphText = sentences.slice(part1Sentences.length).join(' ');
       } else {
         // If even the first sentence is larger than spaceLeft
-        if (currentWords >= curBudget * 0.65) {
+        if (currentWords > 0) {
           pushCurrentPage();
         } else {
-          // Put the first sentence on this page and then advance
+          // If the page is empty, place the first sentence here so we don't get stuck
           const firstSentence = sentences[0];
           const firstWords = countWords(firstSentence);
           currentBlocks.push({ ...block, text: firstSentence });

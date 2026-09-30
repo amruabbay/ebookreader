@@ -24,7 +24,7 @@ interface CuratedBook {
 }
 
 // Category keyword mappings for aliases and resilient subject matching
-export const CATEGORY_MAP: Record<string, { aliases: string[]; searchKeywords: string[]; label: string }> = {
+const CATEGORY_MAP: Record<string, { aliases: string[]; searchKeywords: string[]; label: string }> = {
   anthropology: {
     label: 'Antropologi',
     aliases: ['anthropology', 'ethnology', 'customs', 'folklore', 'mythology', 'culture', 'primitive'],

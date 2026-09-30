@@ -22,9 +22,19 @@ interface ReaderLayoutProps {
 }
 
 export default function ReaderLayout({ book, chapters, navItems, initialProgress }: ReaderLayoutProps) {
-  const [currentChapterId, setCurrentChapterId] = useState<string>(
-    initialProgress?.chapterId || chapters[0]?.id || ''
-  );
+  const [currentChapterId, setCurrentChapterId] = useState<string>(() => {
+    const exists = chapters.some((c) => c.id === initialProgress?.chapterId);
+    return exists ? (initialProgress?.chapterId as string) : (chapters[0]?.id || '');
+  });
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter(
+      (item) =>
+        !/terima\s+kasih\s+telah\s+mengunduh|ebook\s+simon\s*&\s*schuster|klik\s+di\s+sini\s+untuk\s+mendaftar|click\s+here\s+to\s+sign\s+up|dapatkan\s+ebook\s+gratis|kami\s+harap\s+anda\s+menikmati/i.test(
+          item.title
+        )
+    );
+  }, [navItems]);
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [tocOpen, setTocOpen] = useState(false);
   const [tocInitialTab, setTocInitialTab] = useState<'toc' | 'highlights' | 'notes'>('toc');
@@ -1274,7 +1284,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
       <div className="flex flex-1 overflow-hidden relative">
         {/* Navigation Drawer (Right Side) */}
         <TableOfContents
-          chapters={navItems}
+          chapters={filteredNavItems}
           currentChapterId={currentChapterId}
           onSelectChapter={handleSelectChapter}
           isOpen={tocOpen}

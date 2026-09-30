@@ -133,10 +133,17 @@ export default function TableOfContents({
           {activeTab === 'toc' && (
             <nav>
               <ul className="space-y-1">
-                {chapters.map((chapter, index) => {
-                  const isActive = chapter.id === currentChapterId;
-                  return (
-                    <li key={chapter.id}>
+                {chapters
+                  .filter(
+                    (chapter) =>
+                      !/terima\s+kasih\s+telah\s+mengunduh|ebook\s+simon\s*&\s*schuster|klik\s+di\s+sini\s+untuk\s+mendaftar|click\s+here\s+to\s+sign\s+up|dapatkan\s+ebook\s+gratis|kami\s+harap\s+anda\s+menikmati/i.test(
+                        chapter.title
+                      )
+                  )
+                  .map((chapter, index) => {
+                    const isActive = chapter.id === currentChapterId;
+                    return (
+                      <li key={chapter.id}>
                       <button
                         onClick={() => {
                           onSelectChapter(chapter.id);

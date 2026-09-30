@@ -285,59 +285,92 @@ button[aria-label*="Next.js"] {
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
-/* Highlight styles - High-contrast & vibrant matching reference */
+/* Highlight styles - Soft, elegant pastel highlighter markers (Apple Books / Kindle aesthetic) */
 .reader-highlight-red,
 .reader-highlight-pink {
-  background-color: #dc2626;
-  color: #ffffff !important;
-  border-radius: 2px;
-  padding: 1px 3px;
+  background-color: rgba(244, 63, 94, 0.22);
+  color: inherit !important;
+  border-radius: 4px;
+  padding: 1.5px 3px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  border-bottom: 1.5px solid rgba(244, 63, 94, 0.38);
 }
 
 .reader-highlight-yellow {
-  background-color: #fde047;
-  color: #1c1917 !important;
-  border-radius: 2px;
-  padding: 1px 3px;
+  background-color: rgba(250, 204, 21, 0.26);
+  color: inherit !important;
+  border-radius: 4px;
+  padding: 1.5px 3px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  border-bottom: 1.5px solid rgba(234, 179, 8, 0.38);
 }
 
 .reader-highlight-green {
-  background-color: #86efac;
-  color: #052e16 !important;
-  border-radius: 2px;
-  padding: 1px 3px;
+  background-color: rgba(52, 211, 153, 0.22);
+  color: inherit !important;
+  border-radius: 4px;
+  padding: 1.5px 3px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  border-bottom: 1.5px solid rgba(16, 185, 129, 0.38);
 }
 
 .reader-highlight-blue {
-  background-color: #93c5fd;
-  color: #1e3a8a !important;
-  border-radius: 2px;
-  padding: 1px 3px;
+  background-color: rgba(96, 165, 250, 0.22);
+  color: inherit !important;
+  border-radius: 4px;
+  padding: 1.5px 3px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  border-bottom: 1.5px solid rgba(59, 130, 246, 0.38);
 }
 
 .reader-highlight-purple {
-  background-color: #c084fc;
-  color: #ffffff !important;
-  border-radius: 2px;
-  padding: 1px 3px;
+  background-color: rgba(192, 132, 252, 0.22);
+  color: inherit !important;
+  border-radius: 4px;
+  padding: 1.5px 3px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  border-bottom: 1.5px solid rgba(168, 85, 247, 0.38);
 }
 
 .reader-highlight-underline {
   background-color: transparent !important;
+  color: inherit !important;
   text-decoration: underline;
-  text-decoration-color: #dc2626;
-  text-decoration-thickness: 2.5px;
+  text-decoration-color: rgba(244, 63, 94, 0.65);
+  text-decoration-thickness: 2px;
   text-underline-offset: 3.5px;
+}
+
+/* Dark mode adjustments for softer contrast */
+.dark .reader-highlight-red,
+.dark .reader-highlight-pink {
+  background-color: rgba(244, 63, 94, 0.28);
+  border-bottom-color: rgba(244, 63, 94, 0.45);
+}
+
+.dark .reader-highlight-yellow {
+  background-color: rgba(250, 204, 21, 0.24);
+  border-bottom-color: rgba(234, 179, 8, 0.45);
+}
+
+.dark .reader-highlight-green {
+  background-color: rgba(52, 211, 153, 0.24);
+  border-bottom-color: rgba(16, 185, 129, 0.45);
+}
+
+.dark .reader-highlight-blue {
+  background-color: rgba(96, 165, 250, 0.24);
+  border-bottom-color: rgba(59, 130, 246, 0.45);
+}
+
+.dark .reader-highlight-purple {
+  background-color: rgba(192, 132, 252, 0.24);
+  border-bottom-color: rgba(168, 85, 247, 0.45);
 }
 
 /* Scrollbar styling */

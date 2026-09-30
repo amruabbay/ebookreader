@@ -119,10 +119,10 @@ export default function SelectionPopover({
             e.stopPropagation();
             onHighlight('yellow');
           }}
-          className={`w-7 h-7 rounded-full bg-[#fde047] border border-[#eab308] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
+          className={`w-7 h-7 rounded-full bg-[#fef08a] border border-[#facc15] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
             activeHighlight?.color === 'yellow' ? 'ring-2 ring-neutral-700 dark:ring-white scale-110' : ''
           }`}
-          title="Kuning"
+          title="Kuning Lembut"
           aria-label="Kuning"
         />
 
@@ -133,10 +133,10 @@ export default function SelectionPopover({
             e.stopPropagation();
             onHighlight('green');
           }}
-          className={`w-7 h-7 rounded-full bg-[#86efac] border border-[#22c55e] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
+          className={`w-7 h-7 rounded-full bg-[#bbf7d0] border border-[#4ade80] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
             activeHighlight?.color === 'green' ? 'ring-2 ring-neutral-700 dark:ring-white scale-110' : ''
           }`}
-          title="Hijau"
+          title="Hijau Lembut"
           aria-label="Hijau"
         />
 
@@ -147,27 +147,27 @@ export default function SelectionPopover({
             e.stopPropagation();
             onHighlight('blue');
           }}
-          className={`w-7 h-7 rounded-full bg-[#93c5fd] border border-[#3b82f6] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
+          className={`w-7 h-7 rounded-full bg-[#bfdbfe] border border-[#60a5fa] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
             activeHighlight?.color === 'blue' ? 'ring-2 ring-neutral-700 dark:ring-white scale-110' : ''
           }`}
-          title="Biru"
+          title="Biru Lembut"
           aria-label="Biru"
         />
 
-        {/* Red / Pink */}
+        {/* Rose */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onHighlight('red');
           }}
-          className={`w-7 h-7 rounded-full bg-[#fb7185] border border-[#e11d48] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
+          className={`w-7 h-7 rounded-full bg-[#fecdd3] border border-[#fb7185] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
             activeHighlight?.color === 'red' || activeHighlight?.color === 'pink'
               ? 'ring-2 ring-neutral-700 dark:ring-white scale-110'
               : ''
           }`}
-          title="Merah"
-          aria-label="Merah"
+          title="Rose Lembut"
+          aria-label="Rose"
         />
 
         {/* Purple */}
@@ -177,10 +177,10 @@ export default function SelectionPopover({
             e.stopPropagation();
             onHighlight('purple');
           }}
-          className={`w-7 h-7 rounded-full bg-[#c084fc] border border-[#9333ea] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
+          className={`w-7 h-7 rounded-full bg-[#e9d5ff] border border-[#c084fc] hover:scale-115 active:scale-90 transition-transform cursor-pointer shadow-xs touch-manipulation ${
             activeHighlight?.color === 'purple' ? 'ring-2 ring-neutral-700 dark:ring-white scale-110' : ''
           }`}
-          title="Ungu"
+          title="Ungu Lembut"
           aria-label="Ungu"
         />
 
@@ -202,7 +202,7 @@ export default function SelectionPopover({
           title="Garis Bawah (Underline)"
           aria-label="Garis Bawah"
         >
-          <span className="font-serif font-bold text-xs underline decoration-[#dc2626] decoration-2 underline-offset-2">
+          <span className="font-serif font-bold text-xs underline decoration-[#f43f5e]/70 decoration-2 underline-offset-2">
             U
           </span>
         </button>

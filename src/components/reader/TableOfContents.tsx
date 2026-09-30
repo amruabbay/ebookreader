@@ -296,10 +296,13 @@ export default function TableOfContents({
                 highlights.map((hl) => {
                   const noteContent = getNoteForHighlight(hl.id);
                   const colorStyles: Record<string, { border: string; dot: string }> = {
-                    yellow: { border: 'border-l-amber-400', dot: 'bg-amber-400' },
-                    green: { border: 'border-l-emerald-400', dot: 'bg-emerald-400' },
-                    blue: { border: 'border-l-blue-400', dot: 'bg-blue-400' },
-                    pink: { border: 'border-l-pink-400', dot: 'bg-pink-400' },
+                    yellow: { border: 'border-l-amber-300', dot: 'bg-amber-300' },
+                    green: { border: 'border-l-emerald-300', dot: 'bg-emerald-300' },
+                    blue: { border: 'border-l-blue-300', dot: 'bg-blue-300' },
+                    pink: { border: 'border-l-rose-300', dot: 'bg-rose-300' },
+                    red: { border: 'border-l-rose-300', dot: 'bg-rose-300' },
+                    purple: { border: 'border-l-purple-300', dot: 'bg-purple-300' },
+                    underline: { border: 'border-l-rose-300', dot: 'bg-rose-300' },
                   };
                   const style = colorStyles[hl.color] || colorStyles.yellow;
 

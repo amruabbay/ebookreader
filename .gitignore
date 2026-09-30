@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ebook reader data
+/uploads/
+/data/
+*.db
+*.sqlite
+*.sqlite3
+test-book.pdf

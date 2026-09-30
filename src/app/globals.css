@@ -1,8 +1,47 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f5;
+  --foreground: #1c1917;
+  --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --card-bg: #ffffff;
+  --card-border: #ede8e1;
+  --accent-primary: #e11d48;
+  --accent-gold: #f59e0b;
+  --accent-gold-bg: #fef3c7;
+  --accent-gold-text: #92400e;
+  --accent-green-bg: #dcfce7;
+  --accent-green-text: #166534;
+  --accent-blue-bg: #e0f2fe;
+  --accent-blue-text: #0369a1;
+
+  /* Default reader theme (light) */
+  --reader-bg: #ffffff;
+  --reader-text: #18181b;
+  --reader-muted: #71717a;
+  --reader-border: #e4e4e7;
+  --reader-surface: #f4f4f5;
+  --reader-surface-hover: #e4e4e7;
+  --reader-accent: #2563eb;
+  --reader-toolbar-bg: rgba(255, 255, 255, 0.95);
+}
+
+.dark {
+  --background: #121214;
+  --foreground: #f4f4f5;
+  --card-bg: #1c1c1f;
+  --card-border: #2e2e33;
+  --accent-primary: #f43f5e;
+  --accent-gold: #fbbf24;
+  --accent-gold-bg: rgba(245, 158, 11, 0.2);
+  --accent-gold-text: #fde68a;
+  --accent-green-bg: rgba(22, 163, 74, 0.2);
+  --accent-green-text: #86efac;
+  --accent-blue-bg: rgba(2, 132, 199, 0.2);
+  --accent-blue-text: #7dd3fc;
 }
 
 @theme inline {
@@ -12,15 +51,308 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* iOS safe-area utilities for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Dynamic viewport height fallback for iOS Safari */
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Serif font utility for headings and titles (Malaka editorial aesthetic) */
+.font-editorial {
+  font-family: "Georgia", "Cambria", "Times New Roman", "Newsreader", serif;
+  letter-spacing: -0.015em;
+}
+
+/* Book Cover 3D & Spine styling */
+.book-cover-3d {
+  position: relative;
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.12),
+    0 8px 10px -6px rgba(0, 0, 0, 0.08),
+    inset -2px 0 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  border-radius: 4px 8px 8px 4px;
+}
+
+.book-cover-3d:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 18px 30px -7px rgba(0, 0, 0, 0.18),
+    0 10px 14px -5px rgba(0, 0, 0, 0.12);
+}
+
+/* Left spine highlight */
+.book-cover-3d::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.3) 0%, rgba(0, 0, 0, 0.15) 100%);
+  border-radius: 4px 0 0 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Explore Wooden Shelf */
+.wooden-shelf {
+  background: linear-gradient(180deg, #8a5733 0%, #6e4324 50%, #573318 100%);
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.wooden-shelf::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0px,
+    rgba(255, 255, 255, 0.03) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  pointer-events: none;
+}
+
+/* Screws on wooden shelf */
+.shelf-screw {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c5bbb0;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.25);
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.shelf-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: #4a453f;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+/* Hide Next.js floating dev indicator bubble so it never blocks navigation */
+nextjs-portal,
+[data-nextjs-toast],
+div[class*="next-dev-overlay"],
+button[aria-label*="Next.js"] {
+  display: none !important;
+}
+
+/* Card stack binder styling for Koleksi */
+.collection-card {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.collection-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.15);
+}
+
+.collection-card::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: -4px;
+  bottom: -4px;
+  left: 4px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Horizontal scroll shelf hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Reader themes */
+[data-reader-theme="light"] {
+  --reader-bg: #ffffff;
+  --reader-text: #18181b;
+  --reader-muted: #71717a;
+  --reader-border: #e4e4e7;
+  --reader-surface: #f4f4f5;
+  --reader-surface-hover: #e4e4e7;
+  --reader-accent: #2563eb;
+  --reader-toolbar-bg: rgba(255, 255, 255, 0.95);
+}
+
+[data-reader-theme="sepia"] {
+  --reader-bg: #fbf0d9;
+  --reader-text: #433422;
+  --reader-muted: #84725f;
+  --reader-border: #ebdcc3;
+  --reader-surface: #f2e4c8;
+  --reader-surface-hover: #e7d8b9;
+  --reader-accent: #9a6438;
+  --reader-toolbar-bg: rgba(251, 240, 217, 0.95);
+}
+
+[data-reader-theme="dark"] {
+  --reader-bg: #18181b;
+  --reader-text: #f4f4f5;
+  --reader-muted: #a1a1aa;
+  --reader-border: #27272a;
+  --reader-surface: #27272a;
+  --reader-surface-hover: #3f3f46;
+  --reader-accent: #60a5fa;
+  --reader-toolbar-bg: rgba(24, 24, 27, 0.95);
+}
+
+[data-reader-theme="midnight"] {
+  --reader-bg: #09090b;
+  --reader-text: #e2e8f0;
+  --reader-muted: #94a3b8;
+  --reader-border: #1e293b;
+  --reader-surface: #1e293b;
+  --reader-surface-hover: #334155;
+  --reader-accent: #38bdf8;
+  --reader-toolbar-bg: rgba(9, 9, 11, 0.95);
+}
+
+/* Font families for reflow reader */
+.font-reader-serif {
+  font-family: Georgia, Cambria, 'Times New Roman', Times, serif;
+}
+
+.font-reader-sans {
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.font-reader-mono {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Highlight styles - High-contrast & vibrant matching reference */
+.reader-highlight-red,
+.reader-highlight-pink {
+  background-color: #dc2626;
+  color: #ffffff !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader-highlight-yellow {
+  background-color: #fde047;
+  color: #1c1917 !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader-highlight-green {
+  background-color: #86efac;
+  color: #052e16 !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader-highlight-blue {
+  background-color: #93c5fd;
+  color: #1e3a8a !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader-highlight-purple {
+  background-color: #c084fc;
+  color: #ffffff !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader-highlight-underline {
+  background-color: transparent !important;
+  text-decoration: underline;
+  text-decoration-color: #dc2626;
+  text-decoration-thickness: 2.5px;
+  text-underline-offset: 3.5px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.45);
+}
+
+/* Dialog backdrop animation */
+dialog::backdrop {
+  transition: opacity 0.15s ease;
+}
+
+/* Selection styling */
+::selection {
+  background-color: rgba(225, 29, 72, 0.2);
+}
+
+/* iOS Safari Text Selection & Selection Pin Stability */
+.reading-content,
+.reading-content * {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+
+[data-selection-popover],
+[data-selection-popover] * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
 }

@@ -33,10 +33,16 @@ const CHAPTER_PATTERNS: RegExp[] = [
   /^bab\s+[ivxlcdm]+/i,
   /^bagian\s+\d+/i,
   /^bagian\s+[ivxlcdm]+/i,
+  /^kebiasaan\s+\d+/i,
+  /^habit\s+\d+/i,
   /^pendahuluan$/i,
   /^kesimpulan$/i,
   /^daftar\s+pustaka$/i,
-  /^kata\s+pengantar$/i,
+  /^kata\s+pengantar/i,
+  /^prakata/i,
+  /^ucapan\s+terima\s+kasih/i,
+  /^tentang\s+penulis/i,
+  /^about\s+the\s+author/i,
   /^prolog$/i,
   /^epilog$/i,
   /^lampiran/i,
@@ -117,19 +123,32 @@ function isLikelyHeading(line: ExtractedLine, bodyFontSize: number): boolean {
   return false;
 }
 
+const SUBSECTION_ONLY_PATTERNS: RegExp[] = [
+  /^saran\s+aplikasi/i,
+  /^aplikasi\s*:/i,
+  /^apa\s+kata\s+data/i,
+  /^latihan/i,
+  /^catatan\s+kaki/i,
+  /^ringkasan\s+bab/i,
+  /^pertanyaan\s+diskusi/i,
+  /^studi\s+kasus/i,
+];
+
 function isLikelyChapterBreak(line: ExtractedLine, bodyFontSize: number, runningHeaders: Set<string>): boolean {
   const trimmed = line.text.trim();
   if (isOcrArtifact(trimmed)) return false;
   if (isPromotional(trimmed)) return false;
   if (runningHeaders.has(trimmed)) return false;
+  if (SUBSECTION_ONLY_PATTERNS.some((p) => p.test(trimmed))) return false;
 
   // Single word lower-case fragments like "orang." should not break chapters
   if (/^[a-z0-9\.\,\;\:\s]{1,10}$/.test(trimmed)) return false;
 
   const wordCount = trimmed.split(/\s+/).filter((w) => /[a-zA-Z\u00C0-\u024F]/.test(w)).length;
   if (CHAPTER_PATTERNS.some((p) => p.test(trimmed))) return true;
-  if (line.fontSize > bodyFontSize * 1.4 && wordCount >= 1 && trimmed.length <= 120) return true;
-  if (line.fontSize > bodyFontSize * 1.2 && wordCount >= 2 && trimmed.length <= 120) return true;
+
+  // Only very prominent standalone headers (e.g. at least 1.8x body size) should count as chapter breaks
+  if (line.fontSize > bodyFontSize * 1.8 && wordCount >= 1 && trimmed.length <= 80) return true;
   return false;
 }
 

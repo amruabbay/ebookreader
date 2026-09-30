@@ -1264,6 +1264,9 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           isPdfAvailable={isPdfAvailable}
           currentViewMode={activeViewMode}
           onToggleViewMode={handleToggleViewMode}
+          isBookmarked={!!currentBookmark}
+          onToggleBookmark={handleToggleBookmark}
+          onOpenRating={() => setIsRatingModalOpen(true)}
         />
       </div>
 
@@ -1427,6 +1430,41 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
             {/* Content Rendering: Continuous scroll of all chapters in Scroll mode, 2-column per-page in Slide mode */}
             {settings.readingMode === 'scroll' ? (
               <div className="space-y-16">
+                {/* Malaka-style Editorial Book Header Card */}
+                <div className="mb-14 pt-2 border-b pb-8 select-none" style={{ borderColor: 'var(--reader-border)' }}>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1 min-w-0">
+                      {book.author && (
+                        <p className="text-sm font-medium opacity-60 mb-2 font-sans tracking-wide">
+                          {book.author}
+                        </p>
+                      )}
+                      <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight leading-snug mb-3">
+                        {book.title}
+                      </h1>
+                      <p className="text-xs opacity-50 font-sans">
+                        {chapters.length} chapters
+                      </p>
+                    </div>
+                    {book.coverUrl ? (
+                      <img
+                        src={book.coverUrl}
+                        alt={book.title}
+                        className="w-20 sm:w-24 h-28 sm:h-34 object-cover rounded-lg shadow-sm shrink-0 border"
+                        style={{ borderColor: 'var(--reader-border)' }}
+                      />
+                    ) : (
+                      <div
+                        className="w-20 sm:w-24 h-28 sm:h-34 rounded-lg shadow-sm shrink-0 border flex flex-col items-center justify-center p-2 text-center"
+                        style={{ backgroundColor: 'var(--reader-surface)', borderColor: 'var(--reader-border)' }}
+                      >
+                        <span className="text-2xl mb-1">📖</span>
+                        <span className="text-[10px] font-serif font-bold line-clamp-3 leading-tight opacity-75">{book.title}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {chapters.map((chapter, index) => {
                   const isIdLang = currentLang === 'id' && translations[chapter.id];
                   const chContent = isIdLang ? translations[chapter.id].content : chapter.content;
@@ -1474,12 +1512,17 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
                         />
                       </ChapterErrorBoundary>
 
-                      {/* Chapter Separator between chapters */}
+                      {/* Chapter Separator between chapters (Matching Malaka Image 1 ornament) */}
                       {index < chapters.length - 1 && (
-                        <div className="mt-16 md:mt-24 pt-8 flex items-center justify-center gap-4 opacity-30 select-none">
-                          <div className="h-px w-16 bg-current" />
-                          <span className="text-sm font-serif">✦ ✦ ✦</span>
-                          <div className="h-px w-16 bg-current" />
+                        <div className="flex items-center justify-center gap-3 my-20 opacity-35 select-none">
+                          <div className="h-px w-20 bg-gradient-to-r from-transparent to-current" />
+                          <svg width="48" height="12" viewBox="0 0 48 12" fill="currentColor">
+                            <circle cx="12" cy="6" r="3" />
+                            <circle cx="20" cy="6" r="4.5" />
+                            <circle cx="28" cy="6" r="4.5" />
+                            <circle cx="36" cy="6" r="3" />
+                          </svg>
+                          <div className="h-px w-20 bg-gradient-to-l from-transparent to-current" />
                         </div>
                       )}
                     </section>
@@ -1553,64 +1596,60 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           </div>
         </main>
 
-        {/* Scroll Mode: Floating Bottom Progress Pill Widget (Matching Image 1) */}
+        {/* Floating Bottom Progress Capsule with Segmented Bar (Matching Malaka Image 1, 2, 3) */}
         {settings.readingMode === 'scroll' && (
           <div
-            className="fixed left-1/2 -translate-x-1/2 z-20 w-[280px] sm:w-[400px] px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border shadow-xl backdrop-blur-xl flex flex-col gap-2 select-none transition-all hover:opacity-100 opacity-95"
+            className={`fixed left-1/2 -translate-x-1/2 z-20 w-[280px] sm:w-[320px] px-5 py-2.5 rounded-full border shadow-xl backdrop-blur-xl flex flex-col gap-1.5 select-none transition-all duration-300 ${
+              isUIVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'
+            }`}
             style={{
-              ...{
-                backgroundColor: 'var(--reader-toolbar-bg)',
-                borderColor: 'var(--reader-border)',
-                color: 'var(--reader-text)',
-              },
-              bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+              backgroundColor: 'var(--reader-toolbar-bg)',
+              borderColor: 'var(--reader-border)',
+              color: 'var(--reader-text)',
+              bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
             }}
-
           >
-            <div className="flex items-center justify-between text-xs font-mono font-medium">
-              <span className="opacity-80">
+            <div className="flex items-center justify-between text-[11px] font-sans font-medium">
+              <span className="opacity-75 tabular-nums">
                 {currentChapterIndex + 1}/{chapters.length}
               </span>
-              <span className="text-[11px] font-semibold tabular-nums opacity-80">
+              <span className="opacity-75 tabular-nums font-semibold">
                 {progressPercentage.toFixed(1)}%
               </span>
             </div>
-            <div
-              className="w-full h-1 rounded-full overflow-hidden opacity-30"
-              style={{ backgroundColor: 'var(--reader-border)' }}
-            >
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${progressPercentage}%`,
-                  backgroundColor: '#e11d48', // vibrant red accent matching reference
-                }}
-              />
+
+            {/* Segmented chapter progress bar */}
+            <div className="flex items-center gap-1 w-full h-1">
+              {chapters.map((_, i) => {
+                const isCompleted = i < currentChapterIndex;
+                const isCurrent = i === currentChapterIndex;
+                const chapterSpan = 100 / Math.max(1, chapters.length);
+                const chapterStart = i * chapterSpan;
+                const intraChapterRatio = Math.max(
+                  0,
+                  Math.min(1, (progressPercentage - chapterStart) / chapterSpan)
+                );
+
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 h-1 rounded-full overflow-hidden transition-all duration-200"
+                    style={{ backgroundColor: 'rgba(150, 150, 150, 0.25)' }}
+                  >
+                    {isCompleted && (
+                      <div className="w-full h-full bg-red-600 dark:bg-red-500 rounded-full" />
+                    )}
+                    {isCurrent && (
+                      <div
+                        className="h-full bg-red-600 dark:bg-red-500 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.max(15, intraChapterRatio * 100)}%` }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
-
-        {/* Scroll Mode: Floating Scroll-To-Top Button (Matching Image 1) */}
-        {settings.readingMode === 'scroll' && (
-          <button
-            onClick={() => readingAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="fixed right-4 sm:right-6 z-20 w-10 h-10 rounded-full border shadow-lg flex items-center justify-center opacity-80 hover:opacity-100 transition-all cursor-pointer backdrop-blur-md hover:scale-105"
-            style={{
-              ...{
-                backgroundColor: 'var(--reader-surface)',
-                borderColor: 'var(--reader-border)',
-                color: 'var(--reader-text)',
-              },
-              bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))',
-            }}
-
-            title="Kembali ke atas"
-            aria-label="Scroll to top"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m18 15-6-6-6 6"/>
-            </svg>
-          </button>
         )}
 
         {/* Slide Mode (Paginated): Fixed Bottom Navigation Bar (Matching Image 2) */}

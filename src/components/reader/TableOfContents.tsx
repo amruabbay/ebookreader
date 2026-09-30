@@ -96,7 +96,7 @@ export default function TableOfContents({
           <div className="grid grid-cols-4 rounded-xl p-1 gap-1" style={{ backgroundColor: 'var(--reader-surface)' }}>
             <button
               onClick={() => setActiveTab('toc')}
-              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
+              className={`py-1.5 px-0.5 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center whitespace-nowrap ${
                 activeTab === 'toc' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
@@ -105,11 +105,11 @@ export default function TableOfContents({
               }}
               title="Daftar Bab"
             >
-              Isi
+              Bab
             </button>
             <button
               onClick={() => setActiveTab('bookmarks')}
-              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
+              className={`py-1.5 px-0.5 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center whitespace-nowrap ${
                 activeTab === 'bookmarks' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
@@ -118,11 +118,11 @@ export default function TableOfContents({
               }}
               title="Penanda Buku"
             >
-              Penanda ({bookmarks.length})
+              Tanda{bookmarks.length > 0 ? ` (${bookmarks.length})` : ''}
             </button>
             <button
               onClick={() => setActiveTab('highlights')}
-              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
+              className={`py-1.5 px-0.5 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center whitespace-nowrap ${
                 activeTab === 'highlights' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
@@ -131,11 +131,11 @@ export default function TableOfContents({
               }}
               title="Sorotan Teks"
             >
-              Sorotan ({highlights.length})
+              Sorot{highlights.length > 0 ? ` (${highlights.length})` : ''}
             </button>
             <button
               onClick={() => setActiveTab('notes')}
-              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
+              className={`py-1.5 px-0.5 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center whitespace-nowrap ${
                 activeTab === 'notes' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
@@ -144,7 +144,7 @@ export default function TableOfContents({
               }}
               title="Catatan"
             >
-              Catatan ({notes.length})
+              Catatan{notes.length > 0 ? ` (${notes.length})` : ''}
             </button>
           </div>
         </div>

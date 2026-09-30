@@ -57,19 +57,47 @@ interface PdfPageProps {
 
 const PdfPage = memo(function PdfPage({ doc, pageNum, scale, width, height }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeRenderTaskRef = useRef<any>(null);
   const [isRendered, setIsRendered] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Clean up canvas GPU buffer strictly when the page unmounts
+  useEffect(() => {
+    return () => {
+      if (activeRenderTaskRef.current) {
+        try {
+          activeRenderTaskRef.current.cancel();
+        } catch {}
+      }
+      if (canvasRef.current) {
+        canvasRef.current.width = 0;
+        canvasRef.current.height = 0;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     let isCancelled = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let renderTask: any = null;
 
     async function render() {
       if (!doc || !canvasRef.current) return;
       setIsRendered(false);
       setRenderError(null);
+
+      // If there is an ongoing render on this canvas, cancel it and wait for it to release the canvas
+      if (activeRenderTaskRef.current) {
+        try {
+          activeRenderTaskRef.current.cancel();
+          await activeRenderTaskRef.current.promise;
+        } catch {
+          // Expected cancellation rejection
+        }
+        activeRenderTaskRef.current = null;
+      }
+
+      if (isCancelled) return;
 
       try {
         const page = await doc.getPage(pageNum);
@@ -88,23 +116,32 @@ const PdfPage = memo(function PdfPage({ doc, pageNum, scale, width, height }: Pd
         canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
         canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
 
-        renderTask = page.render({
+        const renderTask = page.render({
           canvasContext: ctx,
           viewport,
         });
+        activeRenderTaskRef.current = renderTask;
 
         await renderTask.promise;
 
         if (!isCancelled) {
+          activeRenderTaskRef.current = null;
           setIsRendered(true);
         }
       } catch (err: unknown) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((err as any)?.name !== 'RenderingCancelledException') {
+        const errName = (err as any)?.name;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const errMsg = (err as any)?.message || '';
+        const isCancelledError =
+          isCancelled ||
+          errName === 'RenderingCancelledException' ||
+          errMsg.includes('Rendering cancelled') ||
+          errMsg.includes('cancelled');
+
+        if (!isCancelledError) {
           console.error(`Page ${pageNum} render error:`, err);
-          if (!isCancelled) {
-            setRenderError('Gagal merender halaman.');
-          }
+          setRenderError('Gagal merender halaman.');
         }
       }
     }
@@ -113,14 +150,10 @@ const PdfPage = memo(function PdfPage({ doc, pageNum, scale, width, height }: Pd
 
     return () => {
       isCancelled = true;
-      if (renderTask) {
+      if (activeRenderTaskRef.current) {
         try {
-          renderTask.cancel();
+          activeRenderTaskRef.current.cancel();
         } catch {}
-      }
-      if (canvasRef.current) {
-        canvasRef.current.width = 0;
-        canvasRef.current.height = 0;
       }
     };
   }, [doc, pageNum, scale, retryCount]);
@@ -153,7 +186,10 @@ const PdfPage = memo(function PdfPage({ doc, pageNum, scale, width, height }: Pd
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 p-4 text-center gap-2 z-10">
             <p className="text-xs font-semibold">{renderError}</p>
             <button
-              onClick={() => setRetryCount((c) => c + 1)}
+              onClick={() => {
+                setRenderError(null);
+                setRetryCount((c) => c + 1);
+              }}
               className="px-2.5 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded cursor-pointer transition-colors"
             >
               Coba Lagi

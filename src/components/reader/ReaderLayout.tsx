@@ -1067,7 +1067,13 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           onReadingModeChange={setReadingMode}
           onWordsPerPageChange={setWordsPerPage}
         />
-        <PdfViewerReader book={book} settings={settings} initialProgress={initialProgress} />
+        <PdfViewerReader
+          book={book}
+          settings={settings}
+          initialProgress={initialProgress}
+          chapterId={chapters[0]?.id || currentChapterId}
+          onProgressChange={setProgressPercentage}
+        />
       </div>
     );
   }

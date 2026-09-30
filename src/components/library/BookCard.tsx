@@ -18,7 +18,8 @@ export default function BookCard({
   rank,
   category = 'Non-Fiksi',
 }: BookCardProps) {
-  const progress = Math.round(book.progress?.progressPercentage ?? 0);
+  const rawProgress = book.progress?.progressPercentage ?? 0;
+  const progress = rawProgress > 0 ? Math.max(1, Math.round(rawProgress)) : 0;
   const isReady = book.status === 'ready';
   const isFailed = book.status === 'failed';
 

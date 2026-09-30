@@ -8,6 +8,8 @@ interface PdfViewerReaderProps {
   book: Book;
   settings: ReaderSettings;
   initialProgress?: ReadingProgress | null;
+  chapterId?: string;
+  onProgressChange?: (percentage: number) => void;
 }
 
 // Theme background colors matching the reflow reader
@@ -164,7 +166,13 @@ const PdfPage = memo(function PdfPage({ doc, pageNum, scale, width, height }: Pd
   );
 });
 
-export default function PdfViewerReader({ book, settings, initialProgress }: PdfViewerReaderProps) {
+export default function PdfViewerReader({
+  book,
+  settings,
+  initialProgress,
+  chapterId,
+  onProgressChange,
+}: PdfViewerReaderProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [numPages, setNumPages] = useState(book.totalPages || 0);
@@ -311,16 +319,33 @@ export default function PdfViewerReader({ book, settings, initialProgress }: Pdf
     }, smooth ? 600 : 50);
   }, [numPages, pageCardTotalHeight]);
 
+  // Compute reading progress percentage (0 - 100%)
+  const currentPercentage = useMemo(() => {
+    if (numPages <= 0) return 0;
+    return Math.min(100, Math.max(0, Number(((currentPage / numPages) * 100).toFixed(1))));
+  }, [currentPage, numPages]);
+
+  // Synchronize progress percentage with parent toolbar
+  useEffect(() => {
+    if (numPages > 0) {
+      onProgressChange?.(currentPercentage);
+    }
+  }, [currentPercentage, numPages, onProgressChange]);
+
   // Initial jump to saved progress after doc loads
   const hasRestoredProgressRef = useRef(false);
   useEffect(() => {
     if (!isLoading && pdfDoc && !hasRestoredProgressRef.current) {
       hasRestoredProgressRef.current = true;
-      if (initialProgress?.contentPosition && initialProgress.contentPosition > 1) {
-        goToPage(Math.floor(initialProgress.contentPosition), false);
+      const targetPage = Math.floor(initialProgress?.contentPosition || 1);
+      if (targetPage > 1 && targetPage <= (numPages || 1)) {
+        const timer = setTimeout(() => {
+          goToPage(targetPage, false);
+        }, 80);
+        return () => clearTimeout(timer);
       }
     }
-  }, [isLoading, pdfDoc, initialProgress, goToPage]);
+  }, [isLoading, pdfDoc, initialProgress, numPages, goToPage]);
 
   // Track current page based on scroll position in virtual list
   useEffect(() => {
@@ -351,15 +376,17 @@ export default function PdfViewerReader({ book, settings, initialProgress }: Pdf
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookId: book.id,
-          chapterId: `${book.id}-viewer`,
+          chapterId: chapterId || `${book.id}-viewer`,
           contentPosition: currentPage,
-          progressPercentage: Number(((currentPage - 1) / Math.max(1, numPages - 1)).toFixed(4)),
+          progressPercentage: currentPercentage,
         }),
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error('Failed to save PDF reading progress:', err);
+      });
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [book.id, currentPage, numPages, pdfDoc]);
+  }, [book.id, chapterId, currentPage, currentPercentage, numPages, pdfDoc]);
 
   // Zoom controls
   const zoomIn = useCallback(() => setScale((s) => Math.min(3.0, Number((s + 0.15).toFixed(2)))), []);

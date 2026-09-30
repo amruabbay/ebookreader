@@ -1197,16 +1197,28 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     return () => window.removeEventListener('keydown', handleKey);
   }, [goToPrevChapter, goToNextChapter, goToPrevPage, goToNextPage, settings.readingMode]);
 
-  // Width container class
+  // Reading width container classes (responsive for both mobile & desktop)
   const contentWidthClass = useMemo(() => {
     switch (settings.readingWidth) {
       case 'narrow':
-        return 'max-w-xl';
+        return 'max-w-xl px-10 sm:px-16 md:px-20';
       case 'wide':
-        return 'max-w-4xl';
+        return 'max-w-4xl px-3 sm:px-5 md:px-6';
       case 'normal':
       default:
-        return 'max-w-2xl';
+        return 'max-w-2xl px-6 sm:px-8 md:px-12';
+    }
+  }, [settings.readingWidth]);
+
+  const paginatedWidthClass = useMemo(() => {
+    switch (settings.readingWidth) {
+      case 'narrow':
+        return 'max-w-4xl px-10 sm:px-14';
+      case 'wide':
+        return 'max-w-7xl px-3 sm:px-6';
+      case 'normal':
+      default:
+        return 'max-w-6xl px-6 sm:px-10';
     }
   }, [settings.readingWidth]);
 
@@ -1409,10 +1421,10 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           }}
         >
           <div
-            className={`w-full transition-all duration-200 ${
+            className={`w-full transition-all duration-300 ${
               settings.readingMode === 'paginated'
-                ? 'max-w-6xl mx-auto px-6 lg:px-12 py-6 flex-1 flex flex-col justify-between'
-                : `${contentWidthClass} mx-auto px-6 md:px-12 py-10 md:py-16`
+                ? `${paginatedWidthClass} mx-auto py-6 flex-1 flex flex-col justify-between`
+                : `${contentWidthClass} mx-auto py-10 md:py-16`
             }`}
           >
             {/* Translation status banners */}

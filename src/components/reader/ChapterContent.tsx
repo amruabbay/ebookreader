@@ -155,7 +155,7 @@ export default function ChapterContent({
             {chapterNumber !== undefined ? `CHAPTER ${chapterNumber}` : 'CHAPTER'}
           </p>
           <h1
-            className="font-serif font-normal tracking-tight leading-snug mb-4"
+            className="font-normal tracking-tight leading-snug mb-4"
             style={{
               fontSize: `${Math.round(settings.fontSize * 1.5)}px`,
               color: 'var(--reader-text)',
@@ -178,7 +178,7 @@ export default function ChapterContent({
                 <blockquote
                   key={index}
                   data-block-index={index}
-                  className="border-l-2 pl-4 italic my-6 opacity-85 font-serif break-inside-avoid"
+                  className="border-l-2 pl-4 italic my-6 opacity-85 break-inside-avoid"
                   style={{
                     borderColor: 'var(--reader-border)',
                     color: 'var(--reader-text)',
@@ -193,7 +193,7 @@ export default function ChapterContent({
                 <div
                   key={index}
                   data-block-index={index}
-                  className="pl-6 mb-4 font-serif leading-relaxed break-inside-avoid"
+                  className="pl-6 mb-4 leading-relaxed break-inside-avoid"
                   style={{ color: 'var(--reader-text)' }}
                 >
                   {renderTextWithHighlights(block.text)}
@@ -206,7 +206,7 @@ export default function ChapterContent({
                 <p
                   key={index}
                   data-block-index={index}
-                  className="text-justify md:text-left font-serif transition-colors mb-5 break-inside-auto break-words [overflow-wrap:anywhere]"
+                  className="text-justify md:text-left transition-colors mb-5 break-inside-auto break-words [overflow-wrap:anywhere]"
                   style={{
                     color: 'var(--reader-text)',
                     lineHeight: settings.lineHeight || 1.8,
@@ -235,7 +235,7 @@ function renderHeading(
         <h2
           key={index}
           data-block-index={index}
-          className="font-serif font-bold mt-8 mb-4 leading-snug break-inside-avoid break-after-avoid"
+          className="font-bold mt-8 mb-4 leading-snug break-inside-avoid break-after-avoid"
           style={{ ...baseStyle, fontSize: `${Math.round(settings.fontSize * 1.28)}px` }}
         >
           {renderTextWithHighlights(block.text)}
@@ -246,7 +246,7 @@ function renderHeading(
         <h3
           key={index}
           data-block-index={index}
-          className="font-serif font-bold mt-7 mb-3 leading-snug break-inside-avoid break-after-avoid"
+          className="font-bold mt-7 mb-3 leading-snug break-inside-avoid break-after-avoid"
           style={{ ...baseStyle, fontSize: `${Math.round(settings.fontSize * 1.18)}px` }}
         >
           {renderTextWithHighlights(block.text)}
@@ -257,7 +257,7 @@ function renderHeading(
         <h4
           key={index}
           data-block-index={index}
-          className="font-serif font-semibold mt-6 mb-2 leading-snug break-inside-avoid break-after-avoid"
+          className="font-semibold mt-6 mb-2 leading-snug break-inside-avoid break-after-avoid"
           style={{ ...baseStyle, fontSize: `${Math.round(settings.fontSize * 1.08)}px` }}
         >
           {renderTextWithHighlights(block.text)}

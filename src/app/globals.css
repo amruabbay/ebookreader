@@ -270,16 +270,19 @@ button[aria-label*="Next.js"] {
 }
 
 /* Font families for reflow reader */
-.font-reader-serif {
+.font-reader-serif,
+.font-reader-serif * {
   font-family: var(--font-literata), Georgia, Cambria, 'Times New Roman', Times, serif;
 }
 
-.font-reader-sans {
-  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+.font-reader-sans,
+.font-reader-sans * {
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-.font-reader-mono {
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+.font-reader-mono,
+.font-reader-mono * {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
 /* Highlight styles - High-contrast & vibrant matching reference */

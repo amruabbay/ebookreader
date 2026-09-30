@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { ChapterNavItem, Highlight, Note } from '@/types';
+import type { ChapterNavItem, Highlight, Note, Bookmark } from '@/types';
 
 interface TableOfContentsProps {
   chapters: ChapterNavItem[];
@@ -14,9 +14,12 @@ interface TableOfContentsProps {
   onSelectHighlight: (highlight: Highlight) => void;
   onDeleteHighlight: (id: string) => void;
   initialTab?: TabType;
+  bookmarks?: Bookmark[];
+  onSelectBookmark?: (bookmark: Bookmark) => void;
+  onDeleteBookmark?: (id: string) => void;
 }
 
-type TabType = 'toc' | 'highlights' | 'notes';
+type TabType = 'toc' | 'bookmarks' | 'highlights' | 'notes';
 
 export default function TableOfContents({
   chapters,
@@ -29,6 +32,9 @@ export default function TableOfContents({
   onSelectHighlight,
   onDeleteHighlight,
   initialTab = 'toc',
+  bookmarks = [],
+  onSelectBookmark,
+  onDeleteBookmark,
 }: TableOfContentsProps) {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
@@ -87,42 +93,58 @@ export default function TableOfContents({
           </div>
 
           {/* Tab selector */}
-          <div className="flex rounded-xl p-1 gap-1" style={{ backgroundColor: 'var(--reader-surface)' }}>
+          <div className="grid grid-cols-4 rounded-xl p-1 gap-1" style={{ backgroundColor: 'var(--reader-surface)' }}>
             <button
               onClick={() => setActiveTab('toc')}
-              className={`flex-1 py-1.5 px-2 text-xs rounded-lg font-medium transition-all cursor-pointer text-center ${
+              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
                 activeTab === 'toc' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
                 backgroundColor: activeTab === 'toc' ? 'var(--reader-bg)' : 'transparent',
                 color: 'var(--reader-text)',
               }}
+              title="Daftar Bab"
             >
-              Contents
+              Isi
+            </button>
+            <button
+              onClick={() => setActiveTab('bookmarks')}
+              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
+                activeTab === 'bookmarks' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
+              }`}
+              style={{
+                backgroundColor: activeTab === 'bookmarks' ? 'var(--reader-bg)' : 'transparent',
+                color: 'var(--reader-text)',
+              }}
+              title="Penanda Buku"
+            >
+              Penanda ({bookmarks.length})
             </button>
             <button
               onClick={() => setActiveTab('highlights')}
-              className={`flex-1 py-1.5 px-2 text-xs rounded-lg font-medium transition-all cursor-pointer text-center ${
+              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
                 activeTab === 'highlights' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
                 backgroundColor: activeTab === 'highlights' ? 'var(--reader-bg)' : 'transparent',
                 color: 'var(--reader-text)',
               }}
+              title="Sorotan Teks"
             >
-              Highlights ({highlights.length})
+              Sorotan ({highlights.length})
             </button>
             <button
               onClick={() => setActiveTab('notes')}
-              className={`flex-1 py-1.5 px-2 text-xs rounded-lg font-medium transition-all cursor-pointer text-center ${
+              className={`py-1.5 px-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer text-center truncate ${
                 activeTab === 'notes' ? 'shadow-xs font-semibold' : 'opacity-70 hover:opacity-100'
               }`}
               style={{
                 backgroundColor: activeTab === 'notes' ? 'var(--reader-bg)' : 'transparent',
                 color: 'var(--reader-text)',
               }}
+              title="Catatan"
             >
-              Notes ({notes.length})
+              Catatan ({notes.length})
             </button>
           </div>
         </div>
@@ -174,6 +196,84 @@ export default function TableOfContents({
                 })}
               </ul>
             </nav>
+          )}
+
+          {/* Bookmarks Tab */}
+          {activeTab === 'bookmarks' && (
+            <div className="space-y-2.5">
+              {bookmarks.length === 0 ? (
+                <div className="text-center py-16 px-4 opacity-50 text-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                    </svg>
+                  </div>
+                  <p className="font-semibold">Belum ada penanda halaman</p>
+                  <p className="text-[11px] mt-1 leading-relaxed opacity-75">
+                    Klik ikon penanda pita (bookmark) di bilah atas untuk menandai posisi membaca Anda.
+                  </p>
+                </div>
+              ) : (
+                bookmarks.map((bm) => (
+                  <div
+                    key={bm.id}
+                    className="p-3 rounded-xl border flex flex-col gap-2 transition-all hover:shadow-xs group"
+                    style={{
+                      backgroundColor: 'var(--reader-surface)',
+                      borderColor: 'var(--reader-border)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-red-500 shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                          </svg>
+                        </span>
+                        <span className="text-[10px] font-semibold opacity-60 uppercase tracking-wider truncate">
+                          {bm.label || getChapterTitle(bm.chapterId)}
+                        </span>
+                      </div>
+                      {onDeleteBookmark && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteBookmark(bm.id);
+                          }}
+                          className="p-1 opacity-40 hover:opacity-100 hover:text-red-500 transition-all cursor-pointer shrink-0"
+                          title="Hapus penanda"
+                          aria-label="Delete bookmark"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        onSelectBookmark?.(bm);
+                        onClose();
+                      }}
+                      className="text-left cursor-pointer group-hover:opacity-100 transition-opacity"
+                    >
+                      <p className="text-xs font-semibold line-clamp-2 leading-relaxed opacity-90">
+                        {bm.label || getChapterTitle(bm.chapterId)}
+                      </p>
+                    </button>
+
+                    <span className="text-[10px] opacity-40">
+                      {new Date(bm.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           )}
 
           {/* Highlights Tab */}

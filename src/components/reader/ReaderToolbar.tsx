@@ -7,7 +7,7 @@ import type { ReadingTheme, ReadingMode } from '@/types';
 interface ReaderToolbarProps {
   bookTitle: string;
   chapterTitle?: string;
-  onToggleToc: (initialTab?: 'toc' | 'highlights' | 'notes') => void;
+  onToggleToc: (initialTab?: 'toc' | 'bookmarks' | 'highlights' | 'notes') => void;
   onToggleSettings: () => void;
   progressPercentage: number;
   readingStats?: {
@@ -134,20 +134,31 @@ export default function ReaderToolbar({
             Aa
           </button>
 
-          {/* 4. Bookmark Ribbon Icon (Red ribbon marker matching Malaka UI) */}
+          {/* 4. Bookmark Ribbon Icon */}
           <button
             onClick={onToggleBookmark}
-            className="p-1.5 rounded-full transition-all cursor-pointer hover:scale-105 flex items-center justify-center"
-            title={isBookmarked ? 'Hapus Pembatas Buku' : 'Tambah Pembatas Buku'}
+            className={`p-1.5 rounded-full transition-all cursor-pointer hover:scale-110 flex items-center justify-center ${
+              isBookmarked
+                ? 'text-red-600'
+                : 'opacity-70 hover:opacity-100 text-current'
+            }`}
+            title={isBookmarked ? 'Hapus Penanda Halaman' : 'Tandai Halaman Ini (Bookmark)'}
             aria-label="Toggle Bookmark"
           >
-            <div
-              className={`w-3.5 h-2 rounded-xs transition-all ${
-                isBookmarked
-                  ? 'bg-red-600 shadow-xs scale-110'
-                  : 'bg-red-600/35 hover:bg-red-600/60'
-              }`}
-            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill={isBookmarked ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-transform duration-150 active:scale-90"
+            >
+              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+            </svg>
           </button>
 
           {/* 5. More Options (•••) */}

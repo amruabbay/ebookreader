@@ -37,9 +37,20 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [tocOpen, setTocOpen] = useState(false);
-  const [tocInitialTab, setTocInitialTab] = useState<'toc' | 'highlights' | 'notes'>('toc');
+  const [tocInitialTab, setTocInitialTab] = useState<'toc' | 'bookmarks' | 'highlights' | 'notes'>('toc');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isUIVisible, setIsUIVisible] = useState(true);
+  const [toastMessage, setToastMessage] = useState<{ text: string; icon?: 'bookmark' | 'check' } | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((text: string, icon?: 'bookmark' | 'check') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMessage({ text, icon });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+  }, []);
+
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [userRating, setUserRating] = useState<number>(() => {
     if (typeof window === 'undefined') return 0;
@@ -564,7 +575,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     }
   }, [settings.readingMode]);
 
-  const handleOpenToc = useCallback((tab: 'toc' | 'highlights' | 'notes' = 'toc') => {
+  const handleOpenToc = useCallback((tab: 'toc' | 'bookmarks' | 'highlights' | 'notes' = 'toc') => {
     setTocInitialTab(tab);
     setTocOpen(true);
   }, []);
@@ -676,20 +687,41 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     [settings.readingMode, goToNextPage, goToPrevPage, goToNextChapter, goToPrevChapter]
   );
 
-  // Bookmark toggling
+  // Bookmark toggling with optimistic update and toast feedback
   const handleToggleBookmark = useCallback(async () => {
     if (currentBookmark) {
-      // Remove bookmark
+      // Optimistically remove bookmark
+      const bookmarkToRemove = currentBookmark;
+      setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkToRemove.id));
+      showToast('Penanda halaman dihapus');
+
       try {
-        const res = await fetch(`/api/bookmarks?id=${currentBookmark.id}`, { method: 'DELETE' });
-        if (res.ok) {
-          setBookmarks((prev) => prev.filter((b) => b.id !== currentBookmark.id));
+        const res = await fetch(`/api/bookmarks?id=${bookmarkToRemove.id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          setBookmarks((prev) => [bookmarkToRemove, ...prev]);
+          showToast('Gagal menghapus penanda');
         }
       } catch {
-        // ignore
+        setBookmarks((prev) => [bookmarkToRemove, ...prev]);
+        showToast('Gagal menghapus penanda');
       }
     } else {
-      // Add bookmark
+      // Optimistically add bookmark
+      const tempId = `temp-${Date.now()}`;
+      const scrollPos = readingAreaRef.current?.scrollTop || 0;
+      const chTitle = displayedTitle || currentChapter?.title || 'Bab';
+      const optimisticBookmark: Bookmark = {
+        id: tempId,
+        bookId: book.id,
+        chapterId: currentChapterId,
+        contentPosition: scrollPos,
+        label: chTitle,
+        createdAt: new Date().toISOString(),
+      };
+
+      setBookmarks((prev) => [optimisticBookmark, ...prev]);
+      showToast('Halaman berhasil ditandai', 'bookmark');
+
       try {
         const res = await fetch('/api/bookmarks', {
           method: 'POST',
@@ -697,31 +729,37 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           body: JSON.stringify({
             bookId: book.id,
             chapterId: currentChapterId,
-            contentPosition: readingAreaRef.current?.scrollTop || 0,
-            label: currentChapter?.title || '',
+            contentPosition: scrollPos,
+            label: chTitle,
           }),
         });
+
         if (res.ok) {
           const newBookmark = await res.json();
-          setBookmarks((prev) => [newBookmark, ...prev]);
+          setBookmarks((prev) =>
+            prev.map((b) => (b.id === tempId ? newBookmark : b))
+          );
+        } else {
+          setBookmarks((prev) => prev.filter((b) => b.id !== tempId));
+          showToast('Gagal menyimpan penanda');
         }
       } catch {
-        // ignore
+        setBookmarks((prev) => prev.filter((b) => b.id !== tempId));
+        showToast('Gagal menyimpan penanda');
       }
     }
-  }, [currentBookmark, book.id, currentChapterId, currentChapter]);
+  }, [currentBookmark, book.id, currentChapterId, currentChapter, displayedTitle, showToast]);
 
   // Delete bookmark from sidebar
   const handleDeleteBookmark = useCallback(async (id: string) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
+    showToast('Penanda halaman dihapus');
     try {
-      const res = await fetch(`/api/bookmarks?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setBookmarks((prev) => prev.filter((b) => b.id !== id));
-      }
+      await fetch(`/api/bookmarks?id=${id}`, { method: 'DELETE' });
     } catch {
       // ignore
     }
-  }, []);
+  }, [showToast]);
 
   // Jump to bookmark
   const handleSelectBookmark = useCallback((bm: Bookmark) => {
@@ -1196,6 +1234,9 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           isPdfAvailable={isPdfAvailable}
           currentViewMode={activeViewMode}
           onToggleViewMode={handleToggleViewMode}
+          isBookmarked={!!currentBookmark}
+          onToggleBookmark={handleToggleBookmark}
+          onOpenRating={() => setIsRatingModalOpen(true)}
         />
         <ReaderSettingsModal
           isOpen={settingsOpen}
@@ -1297,6 +1338,9 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           onSelectHighlight={handleSelectHighlight}
           onDeleteHighlight={handleDeleteHighlight}
           initialTab={tocInitialTab}
+          bookmarks={bookmarks}
+          onSelectBookmark={handleSelectBookmark}
+          onDeleteBookmark={handleDeleteBookmark}
         />
 
         {/* Floating Side Navigation Buttons for Paginated Mode (Desktop) */}
@@ -1822,6 +1866,27 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           noteModal.highlight ? () => handleDeleteHighlight(noteModal.highlight!.id) : undefined
         }
       />
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-full shadow-xl border text-xs font-medium backdrop-blur-md"
+            style={{
+              backgroundColor: 'var(--reader-surface)',
+              borderColor: 'var(--reader-border)',
+              color: 'var(--reader-text)',
+            }}
+          >
+            {toastMessage.icon === 'bookmark' && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-red-600">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+              </svg>
+            )}
+            <span>{toastMessage.text}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

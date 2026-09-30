@@ -1,5 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Literata } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const literata = Literata({
+  subsets: ["latin"],
+  variable: "--font-literata",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -21,7 +34,7 @@ export default function RootLayout({
     <html
       lang="id"
       suppressHydrationWarning
-      className="h-full antialiased"
+      className={`h-full antialiased ${inter.variable} ${literata.variable}`}
     >
       <head>
         <script

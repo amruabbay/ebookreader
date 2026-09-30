@@ -16,8 +16,8 @@ const ANDROID_UA =
   'AndroidTranslate/5.3.0.RC02.130475354-53000263 5.1 phone TRANSLATE_69J client';
 
 const GEMINI_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-flash-lite-latest',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
 ];
 
 /**

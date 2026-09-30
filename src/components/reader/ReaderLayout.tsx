@@ -9,6 +9,7 @@ import ReaderSettingsModal from './ReaderSettingsModal';
 import SelectionPopover from './SelectionPopover';
 import NoteEditorModal from './NoteEditorModal';
 import PdfViewerReader from './PdfViewerReader';
+import ChapterErrorBoundary from './ChapterErrorBoundary';
 import Spinner from '@/components/ui/Spinner';
 import { useReaderSettings } from '@/lib/reader/useReaderSettings';
 import { paginateChapter } from '@/lib/reader/paginate';
@@ -28,6 +29,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
   const [tocOpen, setTocOpen] = useState(false);
   const [tocInitialTab, setTocInitialTab] = useState<'toc' | 'highlights' | 'notes'>('toc');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isUIVisible, setIsUIVisible] = useState(true);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [userRating, setUserRating] = useState<number>(() => {
     if (typeof window === 'undefined') return 0;
@@ -456,21 +458,80 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     }
   }, [settings.readingMode, initialProgress, chapters]);
 
-  // Scroll to active chapter when switching to scroll mode
+  // Initial page restoration for paginated mode
+  const initialPageRestoredRef = useRef(false);
+  useEffect(() => {
+    if (initialPageRestoredRef.current) return;
+    if (settings.readingMode === 'paginated' && pages.length > 0 && initialProgress) {
+      initialPageRestoredRef.current = true;
+      const initialChId = initialProgress.chapterId;
+      const chIndex = chapters.findIndex((c) => c.id === initialChId);
+      const activeIdx = chIndex >= 0 ? chIndex : 0;
+
+      const rawPos = initialProgress.contentPosition;
+      if (rawPos >= 1 && rawPos <= pages.length) {
+        setCurrentPage(rawPos);
+      } else {
+        const fraction = Math.max(
+          0,
+          Math.min(1, (initialProgress.progressPercentage / 100) * chapters.length - activeIdx)
+        );
+        const restoredPage = Math.min(
+          pages.length,
+          Math.max(1, Math.round(fraction * (pages.length - 1)) + 1)
+        );
+        setCurrentPage(restoredPage);
+      }
+    }
+  }, [settings.readingMode, pages.length, initialProgress, chapters]);
+
+  // Smooth position preservation when switching between scroll and paginated modes in real-time
   const prevReadingModeRef = useRef(settings.readingMode);
   useEffect(() => {
     if (prevReadingModeRef.current !== settings.readingMode) {
-      if (settings.readingMode === 'scroll' && currentChapterId) {
+      const wasPaginated = prevReadingModeRef.current === 'paginated';
+      const isNowScroll = settings.readingMode === 'scroll';
+      const isNowPaginated = settings.readingMode === 'paginated';
+
+      if (wasPaginated && isNowScroll) {
+        // We were in paginated mode at safeCurrentPage
+        const fraction = pages.length > 1 ? (safeCurrentPage - 1) / (pages.length - 1) : 0;
         setTimeout(() => {
-          const el = document.getElementById(`chapter-${currentChapterId}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (readingAreaRef.current) {
+            const el = readingAreaRef.current;
+            const chEl = document.getElementById(`chapter-${currentChapterId}`);
+            if (chEl) {
+              const chTop = chEl.offsetTop;
+              const chHeight = chEl.offsetHeight;
+              const targetTop = chTop + fraction * Math.max(0, chHeight - el.clientHeight);
+              el.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+            }
           }
-        }, 80);
+        }, 100);
+      } else if (!wasPaginated && isNowPaginated) {
+        // We were in scroll mode. Calculate current scroll fraction of active chapter
+        if (readingAreaRef.current) {
+          const el = readingAreaRef.current;
+          const chEl = document.getElementById(`chapter-${currentChapterId}`);
+          let fraction = 0;
+          if (chEl) {
+            const relativeScroll = el.scrollTop - chEl.offsetTop;
+            const availableScroll = Math.max(1, chEl.offsetHeight - el.clientHeight);
+            fraction = Math.max(0, Math.min(1, relativeScroll / availableScroll));
+          } else {
+            const maxScroll = Math.max(1, el.scrollHeight - el.clientHeight);
+            fraction = Math.max(0, Math.min(1, el.scrollTop / maxScroll));
+          }
+          const targetPage = Math.min(
+            pages.length,
+            Math.max(1, Math.round(fraction * (pages.length - 1)) + 1)
+          );
+          setCurrentPage(targetPage);
+        }
       }
       prevReadingModeRef.current = settings.readingMode;
     }
-  }, [settings.readingMode, currentChapterId]);
+  }, [settings.readingMode, currentChapterId, safeCurrentPage, pages.length]);
 
   // Scroll to top when chapter changes (ONLY in paginated mode)
   useEffect(() => {
@@ -534,6 +595,76 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
       }
     }
   }, [currentChapterIndex, chapters, settings.readingMode]);
+
+  // Mobile Touch Gestures: Horizontal Swipe & Tap-Zone detection
+  const touchStateRef = useRef<{ startX: number; startY: number; startTime: number }>({
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+  });
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStateRef.current = {
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        startTime: Date.now(),
+      };
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.changedTouches.length === 1) {
+        const deltaX = e.changedTouches[0].clientX - touchStateRef.current.startX;
+        const deltaY = e.changedTouches[0].clientY - touchStateRef.current.startY;
+        const deltaTime = Date.now() - touchStateRef.current.startTime;
+
+        // Check horizontal swipe (must be horizontal, > 45px, within 450ms)
+        if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && deltaTime < 450) {
+          if (settings.readingMode === 'paginated') {
+            if (deltaX < 0) {
+              goToNextPage();
+            } else {
+              goToPrevPage();
+            }
+          } else {
+            if (deltaX < 0) {
+              goToNextChapter();
+            } else {
+              goToPrevChapter();
+            }
+          }
+          return;
+        }
+
+        // Check Tap (little movement, < 250ms)
+        if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12 && deltaTime < 250) {
+          // Check if user is selecting text - don't interfere with selection
+          const selection = window.getSelection();
+          if (selection && selection.toString().trim().length > 0) return;
+
+          const screenW = window.innerWidth;
+          const tapX = e.changedTouches[0].clientX;
+
+          if (settings.readingMode === 'paginated') {
+            // Tap zones: Left 20% -> prev page, Right 20% -> next page, Center 60% -> toggle UI
+            if (tapX < screenW * 0.2) {
+              goToPrevPage();
+            } else if (tapX > screenW * 0.8) {
+              goToNextPage();
+            } else {
+              setIsUIVisible((v) => !v);
+            }
+          } else {
+            // Scroll mode: Center tap toggles UI
+            setIsUIVisible((v) => !v);
+          }
+        }
+      }
+    },
+    [settings.readingMode, goToNextPage, goToPrevPage, goToNextChapter, goToPrevChapter]
+  );
 
   // Bookmark toggling
   const handleToggleBookmark = useCallback(async () => {
@@ -1097,25 +1228,34 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
         color: 'var(--reader-text)',
       }}
     >
-      {/* Reader Toolbar */}
-      <ReaderToolbar
-        bookTitle={book.title}
-        chapterTitle={displayedTitle}
-        onToggleToc={handleOpenToc}
-        onToggleSettings={() => setSettingsOpen((v) => !v)}
-        progressPercentage={progressPercentage}
-        readingStats={readingStats}
-        currentLang={currentLang}
-        isTranslating={isTranslating}
-        onToggleLanguage={handleToggleLanguage}
-        currentTheme={settings.theme}
-        onToggleTheme={handleToggleTheme}
-        readingMode={settings.readingMode}
-        onReadingModeChange={setReadingMode}
-        isPdfAvailable={isPdfAvailable}
-        currentViewMode={activeViewMode}
-        onToggleViewMode={handleToggleViewMode}
-      />
+      {/* Reader Toolbar with Immersive Toggle */}
+      <div
+        className={`transition-all duration-300 ease-in-out z-30 shrink-0 ${
+          isUIVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <ReaderToolbar
+          bookTitle={book.title}
+          chapterTitle={displayedTitle}
+          onToggleToc={handleOpenToc}
+          onToggleSettings={() => {
+            setIsUIVisible(true);
+            setSettingsOpen((v) => !v);
+          }}
+          progressPercentage={progressPercentage}
+          readingStats={readingStats}
+          currentLang={currentLang}
+          isTranslating={isTranslating}
+          onToggleLanguage={handleToggleLanguage}
+          currentTheme={settings.theme}
+          onToggleTheme={handleToggleTheme}
+          readingMode={settings.readingMode}
+          onReadingModeChange={setReadingMode}
+          isPdfAvailable={isPdfAvailable}
+          currentViewMode={activeViewMode}
+          onToggleViewMode={handleToggleViewMode}
+        />
+      </div>
 
       {/* Settings Modal Popover */}
       <ReaderSettingsModal
@@ -1188,6 +1328,8 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
         {/* Reading area */}
         <main
           ref={readingAreaRef}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           className={
             settings.readingMode === 'paginated'
               ? 'flex-1 overflow-y-auto overflow-x-hidden flex flex-col justify-between relative w-full max-w-full'
@@ -1304,18 +1446,23 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
                         </div>
                       )}
 
-                      <ChapterContent
-                        content={chContent}
+                      <ChapterErrorBoundary
                         chapterTitle={chTitle}
-                        chapterId={chapter.id}
-                        chapterNumber={index + 1}
-                        settings={settings}
-                        highlights={chHighlights}
-                        showChapterTitle={true}
-                        isTwoColumn={false}
-                        onTextSelected={handleTextSelected}
-                        onHighlightClick={handleHighlightClick}
-                      />
+                        onNextChapter={index < chapters.length - 1 ? goToNextChapter : undefined}
+                      >
+                        <ChapterContent
+                          content={chContent}
+                          chapterTitle={chTitle}
+                          chapterId={chapter.id}
+                          chapterNumber={index + 1}
+                          settings={settings}
+                          highlights={chHighlights}
+                          showChapterTitle={true}
+                          isTwoColumn={false}
+                          onTextSelected={handleTextSelected}
+                          onHighlightClick={handleHighlightClick}
+                        />
+                      </ChapterErrorBoundary>
 
                       {/* Chapter Separator between chapters */}
                       {index < chapters.length - 1 && (
@@ -1374,18 +1521,23 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
             ) : (
               /* Slide (Paginated) Mode */
               <div className="flex-1 w-full min-h-0">
-                <ChapterContent
-                  content={activePage ? activePage.blocks : []}
+                <ChapterErrorBoundary
                   chapterTitle={displayedTitle}
-                  chapterId={currentChapterId}
-                  chapterNumber={currentChapterIndex + 1}
-                  settings={settings}
-                  highlights={currentChapterHighlights}
-                  showChapterTitle={safeCurrentPage === 1}
-                  isTwoColumn={isDesktop}
-                  onTextSelected={handleTextSelected}
-                  onHighlightClick={handleHighlightClick}
-                />
+                  onNextChapter={currentChapterIndex < chapters.length - 1 ? goToNextChapter : undefined}
+                >
+                  <ChapterContent
+                    content={activePage ? activePage.blocks : []}
+                    chapterTitle={displayedTitle}
+                    chapterId={currentChapterId}
+                    chapterNumber={currentChapterIndex + 1}
+                    settings={settings}
+                    highlights={currentChapterHighlights}
+                    showChapterTitle={safeCurrentPage === 1}
+                    isTwoColumn={isDesktop}
+                    onTextSelected={handleTextSelected}
+                    onHighlightClick={handleHighlightClick}
+                  />
+                </ChapterErrorBoundary>
               </div>
             )}
           </div>
@@ -1454,7 +1606,9 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
         {/* Slide Mode (Paginated): Fixed Bottom Navigation Bar (Matching Image 2) */}
         {settings.readingMode === 'paginated' && (
           <footer
-            className="fixed bottom-0 left-0 right-0 min-h-16 border-t backdrop-blur-md px-3 sm:px-10 flex items-center justify-between select-none z-20 transition-colors pb-safe"
+            className={`fixed bottom-0 left-0 right-0 min-h-16 border-t backdrop-blur-md px-3 sm:px-10 flex items-center justify-between select-none z-20 transition-all duration-300 ease-in-out pb-safe ${
+              isUIVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+            }`}
             /* h-16 + safe-area padding for iPhone notch */
             style={{
               backgroundColor: 'var(--reader-toolbar-bg)',

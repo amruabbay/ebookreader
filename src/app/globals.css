@@ -271,11 +271,11 @@ button[aria-label*="Next.js"] {
 
 /* Font families for reflow reader */
 .font-reader-serif {
-  font-family: Georgia, Cambria, 'Times New Roman', Times, serif;
+  font-family: var(--font-literata), Georgia, Cambria, 'Times New Roman', Times, serif;
 }
 
 .font-reader-sans {
-  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .font-reader-mono {

@@ -118,6 +118,10 @@ const PdfPage = memo(function PdfPage({ doc, pageNum, scale, width, height }: Pd
           renderTask.cancel();
         } catch {}
       }
+      if (canvasRef.current) {
+        canvasRef.current.width = 0;
+        canvasRef.current.height = 0;
+      }
     };
   }, [doc, pageNum, scale, retryCount]);
 

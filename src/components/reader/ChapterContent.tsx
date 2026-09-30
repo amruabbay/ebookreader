@@ -205,7 +205,7 @@ export default function ChapterContent({
                 <p
                   key={index}
                   data-block-index={index}
-                  className="text-justify md:text-left transition-colors mb-4 break-inside-auto"
+                  className="text-justify md:text-left transition-colors mb-4 break-inside-auto break-words [overflow-wrap:anywhere]"
                   style={{ color: 'var(--reader-text)' }}
                 >
                   {renderTextWithHighlights(block.text)}

@@ -1031,7 +1031,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     return (
       <div
         data-reader-theme={settings.theme}
-        className="h-dvh-safe flex flex-col transition-colors duration-200"
+        className="h-dvh-safe flex flex-col transition-colors duration-200 overflow-x-hidden w-full max-w-full"
         style={{
           backgroundColor: 'var(--reader-bg)',
           color: 'var(--reader-text)',
@@ -1090,7 +1090,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
   return (
     <div
       data-reader-theme={settings.theme}
-      className="h-dvh-safe flex flex-col transition-colors duration-200"
+      className="h-dvh-safe flex flex-col transition-colors duration-200 overflow-x-hidden w-full max-w-full"
       style={{
         backgroundColor: 'var(--reader-bg)',
         color: 'var(--reader-text)',
@@ -1189,8 +1189,8 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
           ref={readingAreaRef}
           className={
             settings.readingMode === 'paginated'
-              ? 'flex-1 overflow-hidden flex flex-col justify-between relative pb-20 pb-safe'
-              : 'flex-1 overflow-y-auto relative pb-28 sm:pb-24'
+              ? 'flex-1 overflow-hidden flex flex-col justify-between relative pb-20 pb-safe w-full max-w-full'
+              : 'flex-1 overflow-y-auto overflow-x-hidden relative pb-28 sm:pb-24 w-full max-w-full'
           }
         >
           <div

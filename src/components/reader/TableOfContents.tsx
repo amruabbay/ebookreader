@@ -59,8 +59,10 @@ export default function TableOfContents({
 
       {/* Sidebar on RIGHT */}
       <aside
-        className={`fixed top-0 right-0 z-50 h-dvh-safe w-80 sm:w-96 border-l shadow-2xl overflow-hidden transition-transform duration-300 ease-in-out flex flex-col flex-shrink-0 ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 z-50 h-dvh-safe w-80 sm:w-96 max-w-[85vw] border-l shadow-2xl overflow-hidden transition-all duration-300 ease-in-out flex flex-col flex-shrink-0 ${
+          isOpen
+            ? 'translate-x-0 opacity-100 visible pointer-events-auto'
+            : 'translate-x-full opacity-0 invisible pointer-events-none'
         }`}
         style={{
           backgroundColor: 'var(--reader-bg)',

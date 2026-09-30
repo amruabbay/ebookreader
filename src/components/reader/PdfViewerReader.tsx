@@ -467,10 +467,10 @@ export default function PdfViewerReader({
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ background: bg, color: textColor }}>
+    <div className="flex flex-col h-full overflow-hidden w-full max-w-full" style={{ background: bg, color: textColor }}>
       {/* ── Top PDF Toolbar ── */}
       <div
-        className="flex items-center justify-between px-4 py-2 border-b shrink-0 select-none shadow-xs z-20"
+        className="flex items-center justify-between px-2 sm:px-4 py-2 border-b shrink-0 select-none shadow-xs z-20 overflow-x-auto gap-2"
         style={{
           borderColor,
           background: toolbarBg,
@@ -663,7 +663,7 @@ export default function PdfViewerReader({
       {/* ── Virtualized Pages Container ── */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-full"
         style={{
           background: bg,
         }}

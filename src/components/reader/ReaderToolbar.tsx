@@ -52,31 +52,32 @@ export default function ReaderToolbar({
         color: 'var(--reader-text)',
       }}
     >
-      <div className="flex items-center justify-between h-14 px-4 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between h-14 px-3 sm:px-4 max-w-7xl mx-auto w-full gap-2 overflow-hidden">
         {/* Left side: Back to library & Titles */}
-        <div className="flex items-center gap-3 min-w-0 pr-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity shrink-0 py-1 px-2 rounded-lg"
+            className="flex items-center gap-1.5 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity shrink-0 py-1.5 px-2 rounded-lg"
             style={{ backgroundColor: 'var(--reader-surface)' }}
+            title="Kembali ke Library"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6" />
             </svg>
-            <span>Library</span>
+            <span className="hidden sm:inline">Library</span>
           </Link>
 
-          <span className="opacity-30">|</span>
+          <span className="opacity-30 hidden sm:inline">|</span>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-xs font-semibold truncate leading-tight">
               {bookTitle}
             </h1>
             {chapterTitle && (
               <p className="text-[11px] opacity-60 truncate leading-tight flex items-center gap-1.5">
-                <span>{chapterTitle}</span>
+                <span className="truncate">{chapterTitle}</span>
                 {currentLang === 'id' && (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 shrink-0">
                     ID
                   </span>
                 )}
@@ -125,10 +126,10 @@ export default function ReaderToolbar({
             </button>
           )}
 
-          {/* Mode Switcher Segmented Pill Toggle: Scroll vs Slide (Only in Reflow mode) */}
+          {/* Mode Switcher Segmented Pill Toggle: Scroll vs Slide (Only in Reflow mode, visible on tablet/desktop) */}
           {currentViewMode !== 'pdf-viewer' && (
             <div
-              className="flex items-center p-0.5 rounded-full border shadow-2xs select-none mr-1"
+              className="hidden md:flex items-center p-0.5 rounded-full border shadow-2xs select-none mr-1"
               style={{
                 backgroundColor: 'var(--reader-surface)',
                 borderColor: 'var(--reader-border)',
@@ -190,10 +191,10 @@ export default function ReaderToolbar({
             </svg>
           </button>
 
-          {/* Highlights / Notes toggle button */}
+          {/* Highlights / Notes toggle button (Tablet/Desktop, mobile accesses via TOC) */}
           <button
             onClick={() => onToggleToc('highlights')}
-            className="p-2 rounded-xl opacity-75 hover:opacity-100 transition-all cursor-pointer flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9"
+            className="hidden sm:flex p-2 rounded-xl opacity-75 hover:opacity-100 transition-all cursor-pointer items-center justify-center w-8 h-8 sm:w-9 sm:h-9"
             style={{ backgroundColor: 'var(--reader-surface)' }}
             title="Sorotan & Catatan Saya"
             aria-label="Highlights and notes"

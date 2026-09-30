@@ -687,23 +687,30 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
     [settings.readingMode, goToNextPage, goToPrevPage, goToNextChapter, goToPrevChapter]
   );
 
+  // Bookmark in-flight action ref
+  const isBookmarkActionInProgressRef = useRef(false);
+
   // Bookmark toggling with optimistic update and toast feedback
   const handleToggleBookmark = useCallback(async () => {
+    if (isBookmarkActionInProgressRef.current) return;
+    isBookmarkActionInProgressRef.current = true;
+
     if (currentBookmark) {
       // Optimistically remove bookmark
       const bookmarkToRemove = currentBookmark;
-      setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkToRemove.id));
+      setBookmarks((prev) => prev.filter((b) => b.chapterId !== currentChapterId && b.id !== bookmarkToRemove.id));
       showToast('Penanda halaman dihapus');
 
       try {
-        const res = await fetch(`/api/bookmarks?id=${bookmarkToRemove.id}`, { method: 'DELETE' });
-        if (!res.ok) {
-          setBookmarks((prev) => [bookmarkToRemove, ...prev]);
-          showToast('Gagal menghapus penanda');
-        }
-      } catch {
-        setBookmarks((prev) => [bookmarkToRemove, ...prev]);
-        showToast('Gagal menghapus penanda');
+        const url = bookmarkToRemove.id.startsWith('temp-')
+          ? `/api/bookmarks?bookId=${encodeURIComponent(book.id)}&chapterId=${encodeURIComponent(currentChapterId)}`
+          : `/api/bookmarks?id=${encodeURIComponent(bookmarkToRemove.id)}&bookId=${encodeURIComponent(book.id)}&chapterId=${encodeURIComponent(currentChapterId)}`;
+
+        await fetch(url, { method: 'DELETE' });
+      } catch (err) {
+        console.error('Failed to delete bookmark:', err);
+      } finally {
+        isBookmarkActionInProgressRef.current = false;
       }
     } else {
       // Optimistically add bookmark
@@ -719,7 +726,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
         createdAt: new Date().toISOString(),
       };
 
-      setBookmarks((prev) => [optimisticBookmark, ...prev]);
+      setBookmarks((prev) => [optimisticBookmark, ...prev.filter((b) => b.chapterId !== currentChapterId)]);
       showToast('Halaman berhasil ditandai', 'bookmark');
 
       try {
@@ -737,29 +744,31 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
         if (res.ok) {
           const newBookmark = await res.json();
           setBookmarks((prev) =>
-            prev.map((b) => (b.id === tempId ? newBookmark : b))
+            prev.map((b) => (b.id === tempId || b.chapterId === currentChapterId ? newBookmark : b))
           );
-        } else {
-          setBookmarks((prev) => prev.filter((b) => b.id !== tempId));
-          showToast('Gagal menyimpan penanda');
         }
-      } catch {
-        setBookmarks((prev) => prev.filter((b) => b.id !== tempId));
-        showToast('Gagal menyimpan penanda');
+      } catch (err) {
+        console.error('Failed to save bookmark:', err);
+      } finally {
+        isBookmarkActionInProgressRef.current = false;
       }
     }
   }, [currentBookmark, book.id, currentChapterId, currentChapter, displayedTitle, showToast]);
 
   // Delete bookmark from sidebar
   const handleDeleteBookmark = useCallback(async (id: string) => {
+    const target = bookmarks.find((b) => b.id === id);
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
     showToast('Penanda halaman dihapus');
     try {
-      await fetch(`/api/bookmarks?id=${id}`, { method: 'DELETE' });
+      const url = target
+        ? `/api/bookmarks?id=${encodeURIComponent(id)}&bookId=${encodeURIComponent(target.bookId)}&chapterId=${encodeURIComponent(target.chapterId)}`
+        : `/api/bookmarks?id=${encodeURIComponent(id)}`;
+      await fetch(url, { method: 'DELETE' });
     } catch {
       // ignore
     }
-  }, [showToast]);
+  }, [bookmarks, showToast]);
 
   // Jump to bookmark
   const handleSelectBookmark = useCallback((bm: Bookmark) => {

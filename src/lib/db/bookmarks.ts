@@ -32,6 +32,27 @@ export async function createBookmark(
 ): Promise<Bookmark> {
   await ensureSchema();
   const db = getDbClient();
+
+  // If already exists for this book & chapter, update position and label
+  const existing = await db.execute({
+    sql: 'SELECT * FROM bookmarks WHERE book_id = ? AND chapter_id = ? LIMIT 1',
+    args: [bookId, chapterId],
+  });
+
+  if (existing.rows.length > 0) {
+    const existingId = String(existing.rows[0].id);
+    const now = new Date().toISOString();
+    await db.execute({
+      sql: 'UPDATE bookmarks SET content_position = ?, label = ?, created_at = ? WHERE id = ?',
+      args: [contentPosition, label, now, existingId],
+    });
+    const updated = await db.execute({
+      sql: 'SELECT * FROM bookmarks WHERE id = ?',
+      args: [existingId],
+    });
+    return rowToBookmark(updated.rows[0]);
+  }
+
   const id = uuidv4();
   const now = new Date().toISOString();
 
@@ -53,9 +74,19 @@ export async function createBookmark(
 export async function deleteBookmark(id: string): Promise<boolean> {
   await ensureSchema();
   const db = getDbClient();
-  const res = await db.execute({
+  await db.execute({
     sql: 'DELETE FROM bookmarks WHERE id = ?',
     args: [id],
   });
-  return res.rowsAffected > 0;
+  return true;
+}
+
+export async function deleteBookmarkByChapter(bookId: string, chapterId: string): Promise<boolean> {
+  await ensureSchema();
+  const db = getDbClient();
+  await db.execute({
+    sql: 'DELETE FROM bookmarks WHERE book_id = ? AND chapter_id = ?',
+    args: [bookId, chapterId],
+  });
+  return true;
 }

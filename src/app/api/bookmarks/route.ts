@@ -3,6 +3,7 @@ import {
   getBookmarksByBookId,
   createBookmark,
   deleteBookmark,
+  deleteBookmarkByChapter,
 } from '@/lib/db/bookmarks';
 
 export const dynamic = 'force-dynamic';
@@ -46,17 +47,25 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const bookId = searchParams.get('bookId');
+    const chapterId = searchParams.get('chapterId');
 
-  if (!id) {
-    return Response.json({ error: 'id parameter is required' }, { status: 400 });
+    if (id) {
+      await deleteBookmark(id);
+      return Response.json({ success: true });
+    }
+
+    if (bookId && chapterId) {
+      await deleteBookmarkByChapter(bookId, chapterId);
+      return Response.json({ success: true });
+    }
+
+    return Response.json({ error: 'id or (bookId and chapterId) parameter is required' }, { status: 400 });
+  } catch (error) {
+    console.error('Delete bookmark error:', error);
+    return Response.json({ error: 'Failed to delete bookmark' }, { status: 500 });
   }
-
-  const success = await deleteBookmark(id);
-  if (!success) {
-    return Response.json({ error: 'Bookmark not found' }, { status: 404 });
-  }
-
-  return Response.json({ success: true });
 }

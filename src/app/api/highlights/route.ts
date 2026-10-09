@@ -6,6 +6,7 @@ import {
   updateHighlightColor,
   deleteHighlight,
 } from '@/lib/db/highlights';
+import { getReaderIdFromRequest } from '@/lib/reader-id';
 import type { HighlightColor } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -14,14 +15,15 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const bookId = searchParams.get('bookId');
   const chapterId = searchParams.get('chapterId');
+  const readerId = await getReaderIdFromRequest(request);
 
   if (chapterId) {
-    const highlights = await getHighlightsByChapterId(chapterId);
+    const highlights = await getHighlightsByChapterId(chapterId, readerId);
     return Response.json(highlights);
   }
 
   if (bookId) {
-    const highlights = await getHighlightsByBookId(bookId);
+    const highlights = await getHighlightsByBookId(bookId, readerId);
     return Response.json(highlights);
   }
 
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bookId, chapterId, selectedText, startOffset, endOffset, color } = body;
+    const { bookId, chapterId, selectedText, startOffset, endOffset, color, readerId: bodyReaderId } = body;
 
     if (!bookId || !chapterId || !selectedText) {
       return Response.json(
@@ -40,13 +42,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const readerId = bodyReaderId || (await getReaderIdFromRequest(request));
+
     const highlight = await createHighlight(
       bookId,
       chapterId,
       selectedText,
       startOffset || 0,
       endOffset || selectedText.length,
-      (color as HighlightColor) || 'yellow'
+      (color as HighlightColor) || 'yellow',
+      readerId
     );
 
     return Response.json(highlight, { status: 201 });

@@ -63,17 +63,20 @@ export async function ensureSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS reading_progress (
       id TEXT PRIMARY KEY,
-      book_id TEXT NOT NULL UNIQUE,
+      reader_id TEXT NOT NULL DEFAULT 'default',
+      book_id TEXT NOT NULL,
       chapter_id TEXT NOT NULL,
       content_position INTEGER NOT NULL DEFAULT 0,
       progress_percentage REAL NOT NULL DEFAULT 0,
       last_read_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(book_id, reader_id),
       FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
       FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS highlights (
       id TEXT PRIMARY KEY,
+      reader_id TEXT NOT NULL DEFAULT 'default',
       book_id TEXT NOT NULL,
       chapter_id TEXT NOT NULL,
       selected_text TEXT NOT NULL,
@@ -87,6 +90,7 @@ export async function ensureSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY,
+      reader_id TEXT NOT NULL DEFAULT 'default',
       book_id TEXT NOT NULL,
       highlight_id TEXT NOT NULL,
       content TEXT NOT NULL,
@@ -98,6 +102,7 @@ export async function ensureSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS bookmarks (
       id TEXT PRIMARY KEY,
+      reader_id TEXT NOT NULL DEFAULT 'default',
       book_id TEXT NOT NULL,
       chapter_id TEXT NOT NULL,
       content_position INTEGER NOT NULL DEFAULT 0,
@@ -130,6 +135,55 @@ export async function ensureSchema(): Promise<void> {
   } catch {
     // Column may already exist
   }
+
+  // Migrations for reading_progress (reader_id support)
+  try {
+    const tableInfo = await db.execute("PRAGMA table_info(reading_progress)");
+    const hasReaderId = tableInfo.rows.some((r) => r.name === 'reader_id');
+    if (!hasReaderId) {
+      await db.executeMultiple(`
+        CREATE TABLE IF NOT EXISTS reading_progress_v2 (
+          id TEXT PRIMARY KEY,
+          reader_id TEXT NOT NULL DEFAULT 'default',
+          book_id TEXT NOT NULL,
+          chapter_id TEXT NOT NULL,
+          content_position INTEGER NOT NULL DEFAULT 0,
+          progress_percentage REAL NOT NULL DEFAULT 0,
+          last_read_at TEXT NOT NULL DEFAULT (datetime('now')),
+          UNIQUE(book_id, reader_id),
+          FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+          FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
+        );
+        INSERT OR IGNORE INTO reading_progress_v2 (id, reader_id, book_id, chapter_id, content_position, progress_percentage, last_read_at)
+          SELECT id, 'default', book_id, chapter_id, content_position, progress_percentage, last_read_at FROM reading_progress;
+        DROP TABLE reading_progress;
+        ALTER TABLE reading_progress_v2 RENAME TO reading_progress;
+      `);
+    }
+  } catch (err) {
+    console.warn('Failed to migrate reading_progress schema:', err);
+  }
+
+  try {
+    await db.execute("ALTER TABLE bookmarks ADD COLUMN reader_id TEXT NOT NULL DEFAULT 'default'");
+  } catch {}
+  try {
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_bookmarks_reader ON bookmarks(reader_id, book_id)");
+  } catch {}
+
+  try {
+    await db.execute("ALTER TABLE highlights ADD COLUMN reader_id TEXT NOT NULL DEFAULT 'default'");
+  } catch {}
+  try {
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_highlights_reader ON highlights(reader_id, book_id)");
+  } catch {}
+
+  try {
+    await db.execute("ALTER TABLE notes ADD COLUMN reader_id TEXT NOT NULL DEFAULT 'default'");
+  } catch {}
+  try {
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_notes_reader ON notes(reader_id, book_id)");
+  } catch {}
 
   initialized = true;
 }

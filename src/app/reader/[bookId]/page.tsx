@@ -1,7 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getBookById, getAllBooks } from '@/lib/db/books';
 import { getChaptersByBookId, getChapterNavItems } from '@/lib/db/chapters';
 import { getProgressByBookId } from '@/lib/db/progress';
+import { READER_COOKIE_NAME, DEFAULT_READER_ID } from '@/lib/reader-id';
 import ReaderLayout from '@/components/reader/ReaderLayout';
 
 export const dynamic = 'force-dynamic';
@@ -31,10 +33,13 @@ export default async function ReaderPage({
     notFound();
   }
 
+  const cookieStore = await cookies();
+  const readerId = cookieStore.get(READER_COOKIE_NAME)?.value || DEFAULT_READER_ID;
+
   const [chapters, navItems, progress] = await Promise.all([
     getChaptersByBookId(bookId),
     getChapterNavItems(bookId),
-    getProgressByBookId(bookId),
+    getProgressByBookId(bookId, readerId),
   ]);
 
   if (chapters.length === 0) {

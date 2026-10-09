@@ -6,6 +6,7 @@ import type { Row } from '@libsql/client';
 function rowToHighlight(row: Row): Highlight {
   return {
     id: String(row.id),
+    readerId: row.reader_id ? String(row.reader_id) : 'default',
     bookId: String(row.book_id),
     chapterId: String(row.chapter_id),
     selectedText: String(row.selected_text),
@@ -16,22 +17,30 @@ function rowToHighlight(row: Row): Highlight {
   };
 }
 
-export async function getHighlightsByBookId(bookId: string): Promise<Highlight[]> {
+export async function getHighlightsByBookId(
+  bookId: string,
+  readerId: string = 'default'
+): Promise<Highlight[]> {
   await ensureSchema();
   const db = getDbClient();
+  const cleanReaderId = readerId || 'default';
   const res = await db.execute({
-    sql: 'SELECT * FROM highlights WHERE book_id = ? ORDER BY created_at ASC',
-    args: [bookId],
+    sql: 'SELECT * FROM highlights WHERE book_id = ? AND reader_id = ? ORDER BY created_at ASC',
+    args: [bookId, cleanReaderId],
   });
   return res.rows.map(rowToHighlight);
 }
 
-export async function getHighlightsByChapterId(chapterId: string): Promise<Highlight[]> {
+export async function getHighlightsByChapterId(
+  chapterId: string,
+  readerId: string = 'default'
+): Promise<Highlight[]> {
   await ensureSchema();
   const db = getDbClient();
+  const cleanReaderId = readerId || 'default';
   const res = await db.execute({
-    sql: 'SELECT * FROM highlights WHERE chapter_id = ? ORDER BY start_offset ASC',
-    args: [chapterId],
+    sql: 'SELECT * FROM highlights WHERE chapter_id = ? AND reader_id = ? ORDER BY start_offset ASC',
+    args: [chapterId, cleanReaderId],
   });
   return res.rows.map(rowToHighlight);
 }
@@ -42,19 +51,21 @@ export async function createHighlight(
   selectedText: string,
   startOffset: number,
   endOffset: number,
-  color: HighlightColor = 'yellow'
+  color: HighlightColor = 'yellow',
+  readerId: string = 'default'
 ): Promise<Highlight> {
   await ensureSchema();
   const db = getDbClient();
   const id = uuidv4();
   const now = new Date().toISOString();
+  const cleanReaderId = readerId || 'default';
 
   await db.execute({
     sql: `
-      INSERT INTO highlights (id, book_id, chapter_id, selected_text, start_offset, end_offset, color, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO highlights (id, reader_id, book_id, chapter_id, selected_text, start_offset, end_offset, color, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
-    args: [id, bookId, chapterId, selectedText, startOffset, endOffset, color, now],
+    args: [id, cleanReaderId, bookId, chapterId, selectedText, startOffset, endOffset, color, now],
   });
 
   const res = await db.execute({

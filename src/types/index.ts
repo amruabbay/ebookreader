@@ -35,6 +35,7 @@ export interface ContentBlock {
 
 export interface ReadingProgress {
   id: string;
+  readerId?: string;
   bookId: string;
   chapterId: string;
   contentPosition: number;
@@ -44,6 +45,7 @@ export interface ReadingProgress {
 
 export interface Highlight {
   id: string;
+  readerId?: string;
   bookId: string;
   chapterId: string;
   selectedText: string;
@@ -57,6 +59,7 @@ export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'red' | 'pur
 
 export interface Note {
   id: string;
+  readerId?: string;
   bookId: string;
   highlightId: string;
   content: string;
@@ -66,6 +69,7 @@ export interface Note {
 
 export interface Bookmark {
   id: string;
+  readerId?: string;
   bookId: string;
   chapterId: string;
   contentPosition: number;

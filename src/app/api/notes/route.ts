@@ -5,6 +5,7 @@ import {
   upsertNote,
   deleteNote,
 } from '@/lib/db/notes';
+import { getReaderIdFromRequest } from '@/lib/reader-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (bookId) {
-    const notes = await getNotesByBookId(bookId);
+    const readerId = await getReaderIdFromRequest(request);
+    const notes = await getNotesByBookId(bookId, readerId);
     return Response.json(notes);
   }
 
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bookId, highlightId, content } = body;
+    const { bookId, highlightId, content, readerId: bodyReaderId } = body;
 
     if (!bookId || !highlightId || content === undefined) {
       return Response.json(
@@ -38,7 +40,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const note = await upsertNote(bookId, highlightId, content);
+    const readerId = bodyReaderId || (await getReaderIdFromRequest(request));
+    const note = await upsertNote(bookId, highlightId, content, readerId);
     return Response.json(note, { status: 200 });
   } catch (error) {
     console.error('Save note error:', error);

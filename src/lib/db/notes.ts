@@ -6,6 +6,7 @@ import type { Row } from '@libsql/client';
 function rowToNote(row: Row): Note {
   return {
     id: String(row.id),
+    readerId: row.reader_id ? String(row.reader_id) : 'default',
     bookId: String(row.book_id),
     highlightId: String(row.highlight_id),
     content: String(row.content),
@@ -14,12 +15,16 @@ function rowToNote(row: Row): Note {
   };
 }
 
-export async function getNotesByBookId(bookId: string): Promise<Note[]> {
+export async function getNotesByBookId(
+  bookId: string,
+  readerId: string = 'default'
+): Promise<Note[]> {
   await ensureSchema();
   const db = getDbClient();
+  const cleanReaderId = readerId || 'default';
   const res = await db.execute({
-    sql: 'SELECT * FROM notes WHERE book_id = ? ORDER BY created_at DESC',
-    args: [bookId],
+    sql: 'SELECT * FROM notes WHERE book_id = ? AND reader_id = ? ORDER BY created_at DESC',
+    args: [bookId, cleanReaderId],
   });
   return res.rows.map(rowToNote);
 }
@@ -34,10 +39,16 @@ export async function getNoteByHighlightId(highlightId: string): Promise<Note | 
   return res.rows[0] ? rowToNote(res.rows[0]) : null;
 }
 
-export async function upsertNote(bookId: string, highlightId: string, content: string): Promise<Note> {
+export async function upsertNote(
+  bookId: string,
+  highlightId: string,
+  content: string,
+  readerId: string = 'default'
+): Promise<Note> {
   await ensureSchema();
   const db = getDbClient();
   const now = new Date().toISOString();
+  const cleanReaderId = readerId || 'default';
   const existing = await getNoteByHighlightId(highlightId);
 
   if (existing) {
@@ -50,10 +61,10 @@ export async function upsertNote(bookId: string, highlightId: string, content: s
     const id = uuidv4();
     await db.execute({
       sql: `
-        INSERT INTO notes (id, book_id, highlight_id, content, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO notes (id, reader_id, book_id, highlight_id, content, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      args: [id, bookId, highlightId, content, now, now],
+      args: [id, cleanReaderId, bookId, highlightId, content, now, now],
     });
     const res = await db.execute({
       sql: 'SELECT * FROM notes WHERE id = ?',

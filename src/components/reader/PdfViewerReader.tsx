@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import type { Book, ReaderSettings, ReadingProgress } from '@/types';
 import Spinner from '@/components/ui/Spinner';
+import { getOrCreateClientReaderId } from '@/lib/reader/clientReader';
 
 interface PdfViewerReaderProps {
   book: Book;
@@ -411,6 +412,7 @@ export default function PdfViewerReader({
     if (!pdfDoc || numPages <= 0) return;
 
     const timer = setTimeout(() => {
+      const readerId = getOrCreateClientReaderId();
       fetch('/api/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -419,6 +421,7 @@ export default function PdfViewerReader({
           chapterId: chapterId || `${book.id}-viewer`,
           contentPosition: currentPage,
           progressPercentage: currentPercentage,
+          readerId,
         }),
       }).catch((err) => {
         console.error('Failed to save PDF reading progress:', err);

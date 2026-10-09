@@ -13,6 +13,7 @@ import ChapterErrorBoundary from './ChapterErrorBoundary';
 import Spinner from '@/components/ui/Spinner';
 import { useReaderSettings } from '@/lib/reader/useReaderSettings';
 import { paginateChapter } from '@/lib/reader/paginate';
+import { getOrCreateClientReaderId } from '@/lib/reader/clientReader';
 
 interface ReaderLayoutProps {
   book: Book;
@@ -150,6 +151,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
   // Load annotations on mount
   const loadAnnotations = useCallback(async () => {
     try {
+      getOrCreateClientReaderId();
       const [bmRes, hlRes, ntRes] = await Promise.all([
         fetch(`/api/bookmarks?bookId=${book.id}`),
         fetch(`/api/highlights?bookId=${book.id}`),
@@ -362,6 +364,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
   const saveProgress = useCallback(
     async (contentPosition: number, percentage: number) => {
       try {
+        const readerId = getOrCreateClientReaderId();
         await fetch('/api/progress', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -370,6 +373,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
             chapterId: currentChapterId,
             contentPosition,
             progressPercentage: Math.round(percentage * 100) / 100,
+            readerId,
           }),
         });
       } catch {
@@ -738,6 +742,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
             chapterId: currentChapterId,
             contentPosition: scrollPos,
             label: chTitle,
+            readerId: getOrCreateClientReaderId(),
           }),
         });
 
@@ -830,6 +835,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
               startOffset: activePopover.selectionData.startOffset,
               endOffset: activePopover.selectionData.endOffset,
               color,
+              readerId: getOrCreateClientReaderId(),
             }),
           });
           if (res.ok) {
@@ -945,6 +951,7 @@ export default function ReaderLayout({ book, chapters, navItems, initialProgress
             bookId: book.id,
             highlightId: noteModal.highlight.id,
             content,
+            readerId: getOrCreateClientReaderId(),
           }),
         });
         if (res.ok) {

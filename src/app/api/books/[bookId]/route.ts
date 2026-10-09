@@ -3,11 +3,12 @@ import { getBookById, deleteBook } from '@/lib/db/books';
 import { getChaptersByBookId, getChapterNavItems } from '@/lib/db/chapters';
 import { getProgressByBookId } from '@/lib/db/progress';
 import { deleteFile } from '@/lib/storage';
+import { getReaderIdFromRequest } from '@/lib/reader-id';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ bookId: string }> }
 ) {
   const { bookId } = await params;
@@ -18,10 +19,12 @@ export async function GET(
       return Response.json({ error: 'Book not found' }, { status: 404 });
     }
 
+    const readerId = await getReaderIdFromRequest(request);
+
     const [chapters, navItems, progress] = await Promise.all([
       getChaptersByBookId(bookId),
       getChapterNavItems(bookId),
-      getProgressByBookId(bookId),
+      getProgressByBookId(bookId, readerId),
     ]);
 
     return Response.json({

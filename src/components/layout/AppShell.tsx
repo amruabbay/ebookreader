@@ -4,6 +4,13 @@ import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import UploadModal from '@/components/library/UploadModal';
+import {
+  getOrCreateClientReaderId,
+  getClientReaderName,
+  setClientReaderName,
+  switchClientReaderId,
+  resetClientReaderId,
+} from '@/lib/reader/clientReader';
 
 interface AppShellProps {
   children: ReactNode;
@@ -24,6 +31,16 @@ export default function AppShell({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
+  // Reader profile & separate save state
+  const [readerId, setReaderId] = useState<string>('');
+  const [readerName, setReaderName] = useState<string>('Perangkat Ini');
+  const [editName, setEditName] = useState<string>('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [syncKeyInput, setSyncKeyInput] = useState('');
+  const [showSyncInput, setShowSyncInput] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Initialize and synchronize theme with DOM/localStorage/system preference
   useEffect(() => {
@@ -67,6 +84,73 @@ export default function AppShell({
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
+
+  // Initialize and synchronize reader identity
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const currentId = getOrCreateClientReaderId();
+    const currentName = getClientReaderName();
+    setReaderId(currentId);
+    setReaderName(currentName);
+    setEditName(currentName);
+
+    const onProfileChanged = () => {
+      setReaderId(getOrCreateClientReaderId());
+      const updatedName = getClientReaderName();
+      setReaderName(updatedName);
+      setEditName(updatedName);
+    };
+    window.addEventListener('reader-profile-changed', onProfileChanged);
+    return () => window.removeEventListener('reader-profile-changed', onProfileChanged);
+  }, []);
+
+  const handleSaveName = () => {
+    const trimmed = editName.trim();
+    if (!trimmed) return;
+    setClientReaderName(trimmed);
+    setReaderName(trimmed);
+    setIsEditingName(false);
+    setStatusMessage('Nama profil berhasil disimpan!');
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  const handleCopyKey = async () => {
+    try {
+      await navigator.clipboard.writeText(readerId);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch {
+      setStatusMessage('Gagal menyalin kunci.');
+      setTimeout(() => setStatusMessage(null), 3000);
+    }
+  };
+
+  const handleApplySyncKey = () => {
+    const trimmed = syncKeyInput.trim();
+    if (!trimmed) return;
+    if (trimmed === readerId) {
+      setStatusMessage('Kunci ini sudah aktif di perangkat ini.');
+      setTimeout(() => setStatusMessage(null), 3000);
+      return;
+    }
+    const confirmed = window.confirm(
+      'Ganti kunci save ke perangkat ini? Riwayat baca akan beralih mengikuti kunci save tersebut.'
+    );
+    if (!confirmed) return;
+    switchClientReaderId(trimmed);
+    setShowSyncInput(false);
+    setSyncKeyInput('');
+    window.location.reload();
+  };
+
+  const handleResetProfile = () => {
+    const confirmed = window.confirm(
+      'Mulai save baru di perangkat ini? Perangkat ini akan mendapatkan riwayat baca dan bookmark kosong baru (buku perpustakaan tetap aman).'
+    );
+    if (!confirmed) return;
+    resetClientReaderId();
+    window.location.reload();
+  };
 
   const toggleDarkMode = () => {
     if (typeof window === 'undefined') return;
@@ -183,15 +267,15 @@ export default function AppShell({
             className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[#f5f5f4] dark:hover:bg-[#27272a] transition-colors text-left cursor-pointer group"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-stone-700 to-stone-900 dark:from-stone-200 dark:to-white text-white dark:text-stone-900 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-              R
+              {readerName ? readerName[0].toUpperCase() : 'P'}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-[#1c1917] dark:text-white truncate">
-                Ruang Baca Saya
+                {readerName || 'Perangkat Ini'}
               </p>
-              <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                <span>●</span>
-                <span>Pustaka Pribadi</span>
+              <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                <span>Save Pribadi Aktif</span>
               </div>
             </div>
           </button>
@@ -345,7 +429,7 @@ export default function AppShell({
           className="flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-[11px] font-medium text-[#78716c] dark:text-[#a1a1aa] hover:text-[#1c1917] transition-colors cursor-pointer"
         >
           <div className="w-5 h-5 rounded-full bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 font-bold text-[10px] flex items-center justify-center">
-            R
+            {readerName ? readerName[0].toUpperCase() : 'P'}
           </div>
           <span>Profile</span>
         </button>
@@ -456,38 +540,175 @@ export default function AppShell({
         </div>
       )}
 
-      {/* User Profile Modal */}
+      {/* User Profile & Save Manager Modal */}
       {showProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" onClick={() => setShowProfile(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => {
+            setShowProfile(false);
+            setIsEditingName(false);
+            setShowSyncInput(false);
+          }}
+        >
           <div
-            className="w-full max-w-sm bg-white dark:bg-[#18181b] rounded-2xl shadow-2xl border border-[#ede8e1] dark:border-[#27272a] p-6 text-center"
+            className="w-full max-w-md bg-white dark:bg-[#18181b] rounded-3xl shadow-2xl border border-[#ede8e1] dark:border-[#27272a] p-6 text-left relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-stone-700 to-stone-900 dark:from-stone-200 dark:to-white text-white dark:text-stone-900 font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
-              R
-            </div>
-            <h3 className="font-editorial font-bold text-lg mt-3 text-[#1c1917] dark:text-white">
-              Ruang Baca Pribadi
-            </h3>
-            <p className="text-xs text-[#78716c] dark:text-[#a1a1aa]">Perpustakaan Ebook Mandiri</p>
-
-            <div className="mt-5 space-y-2 text-left text-xs text-[#57534e] dark:text-[#a1a1aa]">
-              <div className="p-3 rounded-xl bg-[#faf8f5] dark:bg-[#202024] flex justify-between">
-                <span>Dukungan Format</span>
-                <span className="font-bold text-[#1c1917] dark:text-white">EPUB &amp; PDF</span>
+            {/* Header with avatar & name */}
+            <div className="flex items-start gap-4 pb-4 border-b border-[#ede8e1] dark:border-[#27272a]">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-stone-800 to-stone-950 dark:from-stone-200 dark:to-white text-white dark:text-stone-900 font-bold text-2xl flex items-center justify-center shrink-0 shadow-md">
+                {readerName ? readerName[0].toUpperCase() : 'P'}
               </div>
-              <div className="p-3 rounded-xl bg-[#faf8f5] dark:bg-[#202024] flex justify-between">
-                <span>Penyimpanan Reflow</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">Lokal &amp; Cloud Aktif</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-editorial font-bold text-lg text-[#1c1917] dark:text-white truncate">
+                    {readerName || 'Perangkat Ini'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setIsEditingName(!isEditingName);
+                      setEditName(readerName);
+                    }}
+                    className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                  >
+                    {isEditingName ? 'Batal' : 'Ubah Nama'}
+                  </button>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold border border-emerald-200/80 dark:border-emerald-800/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Save Pribadi Aktif</span>
+                </div>
               </div>
             </div>
 
-            <button
-              onClick={() => setShowProfile(false)}
-              className="w-full mt-6 py-2.5 rounded-xl bg-[#1c1917] text-white dark:bg-white dark:text-[#1c1917] text-xs font-semibold"
-            >
-              Tutup
-            </button>
+            {/* Inline Name Editor */}
+            {isEditingName && (
+              <div className="mt-4 p-3 rounded-2xl bg-[#faf8f5] dark:bg-[#202024] border border-[#ede8e1] dark:border-[#27272a] space-y-2">
+                <label className="text-[11px] font-semibold text-[#78716c] dark:text-[#a1a1aa] block">
+                  Nama Profil / Perangkat Ini:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Contoh: Laptop Budi / HP Saya"
+                    maxLength={30}
+                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-[#e7e5e4] dark:border-[#3f3f46] bg-white dark:bg-[#18181b] text-[#1c1917] dark:text-white focus:outline-rose-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName();
+                    }}
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    className="px-3 py-1.5 rounded-xl bg-[#1c1917] dark:bg-white text-white dark:text-[#1c1917] text-xs font-semibold hover:opacity-90 cursor-pointer"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Status message notification */}
+            {statusMessage && (
+              <div className="mt-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-xs border border-amber-200 dark:border-amber-900 flex items-center gap-2">
+                <span>ℹ️</span>
+                <span>{statusMessage}</span>
+              </div>
+            )}
+
+            {/* Main Information Cards */}
+            <div className="mt-4 space-y-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#faf8f5] dark:bg-[#202024] border border-[#ede8e1] dark:border-[#27272a] space-y-1.5">
+                <div className="flex items-center justify-between text-[#78716c] dark:text-[#a1a1aa] text-[11px]">
+                  <span className="font-semibold text-[#1c1917] dark:text-white">Kunci Save Unik (Reader Key)</span>
+                  <button
+                    onClick={handleCopyKey}
+                    className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                  >
+                    {copyFeedback ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Tersalin!</span>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                        </svg>
+                        <span>Salin Kunci</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="font-mono text-[11px] bg-white dark:bg-[#18181b] p-2 rounded-xl border border-[#e7e5e4] dark:border-[#27272a] text-[#57534e] dark:text-[#d4d4d8] select-all break-all">
+                  {readerId || 'Memuat kunci...'}
+                </div>
+                <p className="text-[11px] text-[#a8a29e] dark:text-[#71717a] leading-relaxed">
+                  Semua riwayat membaca, bab terakhir, bookmark, dan catatan tersimpan secara independen di browser ini dan tidak tercampur dengan pengguna lain.
+                </p>
+              </div>
+
+              {/* Sync from another device */}
+              <div className="p-3.5 rounded-2xl border border-dashed border-[#d6d3d1] dark:border-[#3f3f46] space-y-2">
+                <button
+                  onClick={() => setShowSyncInput(!showSyncInput)}
+                  className="w-full flex items-center justify-between text-[#57534e] dark:text-[#a1a1aa] hover:text-[#1c1917] dark:hover:text-white font-medium cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span>📲</span>
+                    <span>Lanjutkan save dari HP/laptop lain?</span>
+                  </span>
+                  <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold">
+                    {showSyncInput ? 'Tutup' : 'Buka'}
+                  </span>
+                </button>
+
+                {showSyncInput && (
+                  <div className="pt-2 space-y-2 border-t border-[#ede8e1] dark:border-[#27272a]">
+                    <p className="text-[11px] text-[#78716c] dark:text-[#a1a1aa]">
+                      Tempel Kunci Save dari perangkat lain untuk memakai riwayat baca yang sama di sini:
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={syncKeyInput}
+                        onChange={(e) => setSyncKeyInput(e.target.value)}
+                        placeholder="Contoh: reader_xyz123..."
+                        className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-[#e7e5e4] dark:border-[#3f3f46] bg-white dark:bg-[#18181b] text-[#1c1917] dark:text-white font-mono"
+                      />
+                      <button
+                        onClick={handleApplySyncKey}
+                        className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 cursor-pointer"
+                      >
+                        Terapkan
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="mt-5 pt-3 border-t border-[#ede8e1] dark:border-[#27272a] flex items-center justify-between gap-3">
+              <button
+                onClick={handleResetProfile}
+                className="text-[11px] text-[#a8a29e] hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                title="Mulai riwayat baca baru dari 0"
+              >
+                Mulai Save Baru
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowProfile(false);
+                  setIsEditingName(false);
+                  setShowSyncInput(false);
+                }}
+                className="px-5 py-2 rounded-xl bg-[#1c1917] text-white dark:bg-white dark:text-[#1c1917] text-xs font-semibold hover:opacity-90 cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

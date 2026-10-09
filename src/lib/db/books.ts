@@ -23,6 +23,7 @@ function rowToBook(row: Row): Book {
 function rowToProgress(row: Row): ReadingProgress {
   return {
     id: String(row.id),
+    readerId: row.reader_id ? String(row.reader_id) : 'default',
     bookId: String(row.book_id),
     chapterId: String(row.chapter_id),
     contentPosition: Number(row.content_position || 0),
@@ -69,12 +70,16 @@ export async function getAllBooks(): Promise<Book[]> {
   return res.rows.map(rowToBook);
 }
 
-export async function getAllBooksWithProgress(): Promise<BookWithProgress[]> {
+export async function getAllBooksWithProgress(readerId: string = 'default'): Promise<BookWithProgress[]> {
   await ensureSchema();
   const db = getDbClient();
   const books = await getAllBooks();
+  const cleanReaderId = readerId || 'default';
 
-  const progressRes = await db.execute('SELECT * FROM reading_progress');
+  const progressRes = await db.execute({
+    sql: 'SELECT * FROM reading_progress WHERE reader_id = ?',
+    args: [cleanReaderId],
+  });
   const progressMap = new Map<string, ReadingProgress>();
   for (const row of progressRes.rows) {
     const p = rowToProgress(row);

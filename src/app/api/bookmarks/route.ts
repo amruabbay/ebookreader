@@ -5,6 +5,7 @@ import {
   deleteBookmark,
   deleteBookmarkByChapter,
 } from '@/lib/db/bookmarks';
+import { getReaderIdFromRequest } from '@/lib/reader-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,14 +17,15 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: 'bookId parameter is required' }, { status: 400 });
   }
 
-  const bookmarks = await getBookmarksByBookId(bookId);
+  const readerId = await getReaderIdFromRequest(request);
+  const bookmarks = await getBookmarksByBookId(bookId, readerId);
   return Response.json(bookmarks);
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bookId, chapterId, contentPosition, label } = body;
+    const { bookId, chapterId, contentPosition, label, readerId: bodyReaderId } = body;
 
     if (!bookId || !chapterId) {
       return Response.json(
@@ -32,11 +34,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const readerId = bodyReaderId || (await getReaderIdFromRequest(request));
+
     const bookmark = await createBookmark(
       bookId,
       chapterId,
       contentPosition || 0,
-      label || ''
+      label || '',
+      readerId
     );
 
     return Response.json(bookmark, { status: 201 });
@@ -52,14 +57,15 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     const bookId = searchParams.get('bookId');
     const chapterId = searchParams.get('chapterId');
+    const readerId = await getReaderIdFromRequest(request);
 
     if (id) {
-      await deleteBookmark(id);
+      await deleteBookmark(id, readerId);
       return Response.json({ success: true });
     }
 
     if (bookId && chapterId) {
-      await deleteBookmarkByChapter(bookId, chapterId);
+      await deleteBookmarkByChapter(bookId, chapterId, readerId);
       return Response.json({ success: true });
     }
 

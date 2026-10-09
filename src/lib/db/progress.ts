@@ -6,6 +6,7 @@ import type { Row } from '@libsql/client';
 function rowToProgress(row: Row): ReadingProgress {
   return {
     id: String(row.id),
+    readerId: row.reader_id ? String(row.reader_id) : 'default',
     bookId: String(row.book_id),
     chapterId: String(row.chapter_id),
     contentPosition: Number(row.content_position || 0),
@@ -14,12 +15,16 @@ function rowToProgress(row: Row): ReadingProgress {
   };
 }
 
-export async function getProgressByBookId(bookId: string): Promise<ReadingProgress | null> {
+export async function getProgressByBookId(
+  bookId: string,
+  readerId: string = 'default'
+): Promise<ReadingProgress | null> {
   await ensureSchema();
   const db = getDbClient();
+  const cleanReaderId = readerId || 'default';
   const res = await db.execute({
-    sql: 'SELECT * FROM reading_progress WHERE book_id = ?',
-    args: [bookId],
+    sql: 'SELECT * FROM reading_progress WHERE book_id = ? AND reader_id = ?',
+    args: [bookId, cleanReaderId],
   });
   return res.rows[0] ? rowToProgress(res.rows[0]) : null;
 }
@@ -28,11 +33,13 @@ export async function upsertProgress(
   bookId: string,
   chapterId: string,
   contentPosition: number,
-  progressPercentage: number
+  progressPercentage: number,
+  readerId: string = 'default'
 ): Promise<ReadingProgress> {
   await ensureSchema();
   const db = getDbClient();
   const now = new Date().toISOString();
+  const cleanReaderId = readerId || 'default';
 
   // Validate that chapterId exists in chapters table to prevent SQLite foreign key constraint errors
   let validChapterId = chapterId;
@@ -61,28 +68,28 @@ export async function upsertProgress(
     }
   }
 
-  const existing = await getProgressByBookId(bookId);
+  const existing = await getProgressByBookId(bookId, cleanReaderId);
 
   if (existing) {
     await db.execute({
       sql: `
         UPDATE reading_progress
         SET chapter_id = ?, content_position = ?, progress_percentage = ?, last_read_at = ?
-        WHERE book_id = ?
+        WHERE book_id = ? AND reader_id = ?
       `,
-      args: [validChapterId, contentPosition, progressPercentage, now, bookId],
+      args: [validChapterId, contentPosition, progressPercentage, now, bookId, cleanReaderId],
     });
   } else {
     const id = uuidv4();
     await db.execute({
       sql: `
-        INSERT INTO reading_progress (id, book_id, chapter_id, content_position, progress_percentage, last_read_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO reading_progress (id, reader_id, book_id, chapter_id, content_position, progress_percentage, last_read_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      args: [id, bookId, validChapterId, contentPosition, progressPercentage, now],
+      args: [id, cleanReaderId, bookId, validChapterId, contentPosition, progressPercentage, now],
     });
   }
 
-  const updated = await getProgressByBookId(bookId);
+  const updated = await getProgressByBookId(bookId, cleanReaderId);
   return updated!;
 }

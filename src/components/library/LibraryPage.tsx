@@ -9,6 +9,7 @@ import UploadModal from '@/components/library/UploadModal';
 import AppShell from '@/components/layout/AppShell';
 import Spinner from '@/components/ui/Spinner';
 import Link from 'next/link';
+import { getOrCreateClientReaderId } from '@/lib/reader/clientReader';
 
 // Timeless and renowned authors from literature, philosophy, and history
 const TIMELESS_AUTHORS = [
@@ -131,7 +132,14 @@ export default function LibraryPage() {
   }, []);
 
   useEffect(() => {
+    getOrCreateClientReaderId();
     fetchBooks();
+
+    const handleProfileChange = () => {
+      fetchBooks();
+    };
+    window.addEventListener('reader-profile-changed', handleProfileChange);
+    return () => window.removeEventListener('reader-profile-changed', handleProfileChange);
   }, [fetchBooks]);
 
   const handleDelete = useCallback(async (id: string) => {
